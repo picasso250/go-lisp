@@ -397,18 +397,18 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("string-trim", func(args []interface{}) interface{} { return strings.TrimSpace(args[0].(string)) })
-	e.set("string-length", func(args []interface{}) interface{} { return int64(len(args[0].(string))) })
+	e.set("string-length", func(args []interface{}) interface{} { return int64(len([]rune(args[0].(string)))) })
 	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
 	e.set("string-replace", func(args []interface{}) interface{} {
 		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
 	})
 	e.set("string-at", func(args []interface{}) interface{} {
-		s := args[0].(string)
+		s := []rune(args[0].(string))
 		i := args[1].(int64)
 		return string(s[i])
 	})
 	e.set("string->list", func(args []interface{}) interface{} {
-		s := args[0].(string)
+		s := []rune(args[0].(string))
 		res := make(List, len(s))
 		for i, r := range s {
 			res[i] = string(r)
@@ -418,11 +418,17 @@ func standardEnv() *Env {
 
 	// Files
 	e.set("read-file", func(args []interface{}) interface{} {
-		content, _ := os.ReadFile(args[0].(string))
+		content, err := os.ReadFile(args[0].(string))
+		if err != nil {
+			panic(fmt.Sprintf("read-file failed: %v", err))
+		}
 		return string(content)
 	})
 	e.set("write-file", func(args []interface{}) interface{} {
-		os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644)
+		err := os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644)
+		if err != nil {
+			panic(fmt.Sprintf("write-file failed: %v", err))
+		}
 		return true
 	})
 

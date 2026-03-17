@@ -232,6 +232,9 @@ func eval(x interface{}, env *Env) interface{} {
 						}
 						capturedEnv := env
 						val := func(args []interface{}) interface{} {
+							if len(args) != len(params) {
+								panic(fmt.Sprintf("%s: expected %d arguments, got %d", name, len(params), len(args)))
+							}
 							newEnv := &Env{vars: make(map[Symbol]interface{}), outer: capturedEnv}
 							for i, p := range params {
 								newEnv.set(p.(Symbol), args[i])
@@ -305,6 +308,9 @@ func eval(x interface{}, env *Env) interface{} {
 					body := v[2]
 					capturedEnv := env
 					return func(args []interface{}) interface{} {
+						if len(args) != len(params) {
+							panic(fmt.Sprintf("lambda: expected %d arguments, got %d", len(params), len(args)))
+						}
 						newEnv := &Env{vars: make(map[Symbol]interface{}), outer: capturedEnv}
 						for i, p := range params {
 							newEnv.set(p.(Symbol), args[i])

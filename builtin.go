@@ -33,6 +33,9 @@ func resolve(val interface{}) interface{} {
 // binaryOp 算术运算工厂
 func binaryOp(name string, opInt func(int64, int64) int64, opFloat func(float64, float64) float64) func([]interface{}) interface{} {
 	return func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("%s expects 2 arguments, got %d", name, len(args)))
+		}
 		a, b := args[0], args[1]
 		mustSameType(name, a, b)
 		switch av := a.(type) {
@@ -185,6 +188,9 @@ func standardEnv() *Env {
 
 	// Python-like Math
 	e.set("abs", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("abs expects 1 argument, got %d", len(args)))
+		}
 		switch v := args[0].(type) {
 		case int64:
 			if v < 0 {
@@ -198,6 +204,9 @@ func standardEnv() *Env {
 		}
 	})
 	e.set("pow", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("pow expects 2 arguments, got %d", len(args)))
+		}
 		a, b := args[0], args[1]
 		if ai, ok := a.(int64); ok {
 			return int64(math.Pow(float64(ai), float64(b.(int64))))
@@ -205,13 +214,24 @@ func standardEnv() *Env {
 		return math.Pow(a.(float64), b.(float64))
 	})
 	e.set("divmod", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("divmod expects 2 arguments, got %d", len(args)))
+		}
 		a, b := args[0].(int64), args[1].(int64)
 		return List{a / b, a % b}
 	})
-	e.set("round", func(args []interface{}) interface{} { return math.Round(args[0].(float64)) })
+	e.set("round", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("round expects 1 argument, got %d", len(args)))
+		}
+		return math.Round(args[0].(float64))
+	})
 
 	// Conversions & Predicates
 	e.set("int", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("int expects 1 argument, got %d", len(args)))
+		}
 		switch v := args[0].(type) {
 		case float64:
 			return int64(v)
@@ -224,6 +244,9 @@ func standardEnv() *Env {
 	})
 	e.set("integer", e.get("int")) // alias
 	e.set("float", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("float expects 1 argument, got %d", len(args)))
+		}
 		switch v := args[0].(type) {
 		case int64:
 			return float64(v)
@@ -237,9 +260,15 @@ func standardEnv() *Env {
 		}
 	})
 	e.set("str", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("str expects 1 argument, got %d", len(args)))
+		}
 		return fmt.Sprintf("%v", args[0])
 	})
 	e.set("bool", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("bool expects 1 argument, got %d", len(args)))
+		}
 		if args[0] == nil || args[0] == false {
 			return false
 		}
@@ -257,21 +286,87 @@ func standardEnv() *Env {
 		}
 		return true
 	})
-	e.set("integer?", func(args []interface{}) interface{} { _, ok := args[0].(int64); return ok })
-	e.set("float?", func(args []interface{}) interface{} { _, ok := args[0].(float64); return ok })
-	e.set("string?", func(args []interface{}) interface{} { _, ok := args[0].(string); return ok })
-	e.set("list?", func(args []interface{}) interface{} { _, ok := args[0].(List); return ok })
-	e.set("dict?", func(args []interface{}) interface{} { _, ok := args[0].(Dict); return ok })
-	e.set("nil?", func(args []interface{}) interface{} { return args[0] == nil })
-	e.set("bool?", func(args []interface{}) interface{} { _, ok := args[0].(bool); return ok })
+	e.set("integer?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("integer? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(int64)
+		return ok
+	})
+	e.set("float?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("float? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(float64)
+		return ok
+	})
+	e.set("string?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("string? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(string)
+		return ok
+	})
+	e.set("list?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("list? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(List)
+		return ok
+	})
+	e.set("dict?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("dict? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(Dict)
+		return ok
+	})
+	e.set("nil?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("nil? expects 1 argument, got %d", len(args)))
+		}
+		return args[0] == nil
+	})
+	e.set("bool?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("bool? expects 1 argument, got %d", len(args)))
+		}
+		_, ok := args[0].(bool)
+		return ok
+	})
 
 	// List Ops
-	e.set("car", func(args []interface{}) interface{} { return args[0].(List)[0] })
-	e.set("cdr", func(args []interface{}) interface{} { return args[0].(List)[1:] })
-	e.set("cons", func(args []interface{}) interface{} { return append(List{args[0]}, args[1].(List)...) })
+	e.set("car", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("car expects 1 argument, got %d", len(args)))
+		}
+		return args[0].(List)[0]
+	})
+	e.set("cdr", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("cdr expects 1 argument, got %d", len(args)))
+		}
+		return args[0].(List)[1:]
+	})
+	e.set("cons", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("cons expects 2 arguments, got %d", len(args)))
+		}
+		return append(List{args[0]}, args[1].(List)...)
+	})
 	e.set("list", func(args []interface{}) interface{} { return List(args) })
-	e.set("null?", func(args []interface{}) interface{} { return len(args[0].(List)) == 0 })
-	e.set("length", func(args []interface{}) interface{} { return int64(len(args[0].(List))) })
+	e.set("null?", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("null? expects 1 argument, got %d", len(args)))
+		}
+		return len(args[0].(List)) == 0
+	})
+	e.set("length", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("length expects 1 argument, got %d", len(args)))
+		}
+		return int64(len(args[0].(List)))
+	})
 	e.set("append", func(args []interface{}) interface{} {
 		res := List{}
 		for _, arg := range args {
@@ -280,10 +375,16 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("nth", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("nth expects 2 arguments, got %d", len(args)))
+		}
 		idx := args[1].(int64)
 		return args[0].(List)[idx]
 	})
 	e.set("reverse", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("reverse expects 1 argument, got %d", len(args)))
+		}
 		l := args[0].(List)
 		res := make(List, len(l))
 		for i, v := range l {
@@ -295,6 +396,9 @@ func standardEnv() *Env {
 
 	// Dictionary Ops
 	e.set("dict", func(args []interface{}) interface{} {
+		if len(args)%2 != 0 {
+			panic(fmt.Sprintf("dict expects an even number of arguments, got %d", len(args)))
+		}
 		d := make(Dict)
 		for i := 0; i < len(args); i += 2 {
 			d[args[i].(string)] = args[i+1]
@@ -302,15 +406,24 @@ func standardEnv() *Env {
 		return d
 	})
 	e.set("dict-get", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("dict-get expects 2 arguments, got %d", len(args)))
+		}
 		d, key := args[0].(Dict), args[1].(string)
 		return d[key]
 	})
 	e.set("dict-set!", func(args []interface{}) interface{} {
+		if len(args) != 3 {
+			panic(fmt.Sprintf("dict-set! expects 3 arguments, got %d", len(args)))
+		}
 		d, key, val := args[0].(Dict), args[1].(string), args[2]
 		d[key] = val
 		return val
 	})
 	e.set("dict-keys", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("dict-keys expects 1 argument, got %d", len(args)))
+		}
 		d := args[0].(Dict)
 		keys := make(List, 0, len(d))
 		for k := range d {
@@ -319,6 +432,9 @@ func standardEnv() *Env {
 		return keys
 	})
 	e.set("dict-has?", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("dict-has? expects 2 arguments, got %d", len(args)))
+		}
 		d, key := args[0].(Dict), args[1].(string)
 		_, ok := d[key]
 		return ok
@@ -326,6 +442,9 @@ func standardEnv() *Env {
 
 	// TCP Ops
 	e.set("tcp-listen", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("tcp-listen expects 1 argument, got %d", len(args)))
+		}
 		addr := args[0].(string)
 		l, err := net.Listen("tcp", addr)
 		if err != nil {
@@ -334,6 +453,9 @@ func standardEnv() *Env {
 		return l
 	})
 	e.set("tcp-accept", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("tcp-accept expects 1 argument, got %d", len(args)))
+		}
 		l := args[0].(net.Listener)
 		conn, err := l.Accept()
 		if err != nil {
@@ -342,6 +464,9 @@ func standardEnv() *Env {
 		return conn
 	})
 	e.set("tcp-connect", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("tcp-connect expects 1 argument, got %d", len(args)))
+		}
 		addr := args[0].(string)
 		conn, err := net.Dial("tcp", addr)
 		if err != nil {
@@ -350,6 +475,9 @@ func standardEnv() *Env {
 		return conn
 	})
 	e.set("tcp-send", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("tcp-send expects 2 arguments, got %d", len(args)))
+		}
 		conn, data := args[0].(net.Conn), args[1].(string)
 		n, err := conn.Write([]byte(data))
 		if err != nil {
@@ -358,6 +486,9 @@ func standardEnv() *Env {
 		return int64(n)
 	})
 	e.set("tcp-read", func(args []interface{}) interface{} {
+		if len(args) < 1 {
+			panic(fmt.Sprintf("tcp-read expects at least 1 argument, got %d", len(args)))
+		}
 		conn := args[0].(net.Conn)
 		max := 1024
 		if len(args) > 1 {
@@ -371,6 +502,9 @@ func standardEnv() *Env {
 		return string(buf[:n])
 	})
 	e.set("tcp-close", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("tcp-close expects 1 argument, got %d", len(args)))
+		}
 		if l, ok := args[0].(net.Listener); ok {
 			l.Close()
 		} else if c, ok := args[0].(net.Conn); ok {
@@ -388,6 +522,9 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("string-split", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("string-split expects 2 arguments, got %d", len(args)))
+		}
 		s, sep := args[0].(string), args[1].(string)
 		parts := strings.Split(s, sep)
 		res := make(List, len(parts))
@@ -396,18 +533,42 @@ func standardEnv() *Env {
 		}
 		return res
 	})
-	e.set("string-trim", func(args []interface{}) interface{} { return strings.TrimSpace(args[0].(string)) })
-	e.set("string-length", func(args []interface{}) interface{} { return int64(len([]rune(args[0].(string)))) })
-	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
+	e.set("string-trim", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("string-trim expects 1 argument, got %d", len(args)))
+		}
+		return strings.TrimSpace(args[0].(string))
+	})
+	e.set("string-length", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("string-length expects 1 argument, got %d", len(args)))
+		}
+		return int64(len([]rune(args[0].(string))))
+	})
+	e.set("string-contains?", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("string-contains? expects 2 arguments, got %d", len(args)))
+		}
+		return strings.Contains(args[0].(string), args[1].(string))
+	})
 	e.set("string-replace", func(args []interface{}) interface{} {
+		if len(args) != 3 {
+			panic(fmt.Sprintf("string-replace expects 3 arguments, got %d", len(args)))
+		}
 		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
 	})
 	e.set("string-at", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("string-at expects 2 arguments, got %d", len(args)))
+		}
 		s := []rune(args[0].(string))
 		i := args[1].(int64)
 		return string(s[i])
 	})
 	e.set("string->list", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("string->list expects 1 argument, got %d", len(args)))
+		}
 		s := []rune(args[0].(string))
 		res := make(List, len(s))
 		for i, r := range s {
@@ -418,6 +579,9 @@ func standardEnv() *Env {
 
 	// Files
 	e.set("read-file", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("read-file expects 1 argument, got %d", len(args)))
+		}
 		content, err := os.ReadFile(args[0].(string))
 		if err != nil {
 			panic(fmt.Sprintf("read-file failed: %v", err))
@@ -425,6 +589,9 @@ func standardEnv() *Env {
 		return string(content)
 	})
 	e.set("write-file", func(args []interface{}) interface{} {
+		if len(args) != 2 {
+			panic(fmt.Sprintf("write-file expects 2 arguments, got %d", len(args)))
+		}
 		err := os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644)
 		if err != nil {
 			panic(fmt.Sprintf("write-file failed: %v", err))
@@ -434,6 +601,9 @@ func standardEnv() *Env {
 
 	// Iterables
 	e.set("range", func(args []interface{}) interface{} {
+		if len(args) < 1 || len(args) > 2 {
+			panic(fmt.Sprintf("range expects 1 or 2 arguments, got %d", len(args)))
+		}
 		start := int64(0)
 		stop := args[0].(int64)
 		if len(args) > 1 {
@@ -447,6 +617,9 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("sorted", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("sorted expects 1 argument, got %d", len(args)))
+		}
 		l := append(List{}, args[0].(List)...)
 		if len(l) <= 1 {
 			return l
@@ -485,6 +658,9 @@ func standardEnv() *Env {
 		return nil
 	})
 	e.set("input", func(args []interface{}) interface{} {
+		if len(args) > 1 {
+			panic(fmt.Sprintf("input expects at most 1 argument, got %d", len(args)))
+		}
 		if len(args) > 0 {
 			fmt.Print(args[0])
 		}
@@ -494,9 +670,24 @@ func standardEnv() *Env {
 		}
 		return ""
 	})
-	e.set("type", func(args []interface{}) interface{} { return fmt.Sprintf("%T", args[0]) })
-	e.set("bin", func(args []interface{}) interface{} { return "0b" + strconv.FormatInt(args[0].(int64), 2) })
-	e.set("hex", func(args []interface{}) interface{} { return "0x" + strconv.FormatInt(args[0].(int64), 16) })
+	e.set("type", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("type expects 1 argument, got %d", len(args)))
+		}
+		return fmt.Sprintf("%T", args[0])
+	})
+	e.set("bin", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("bin expects 1 argument, got %d", len(args)))
+		}
+		return "0b" + strconv.FormatInt(args[0].(int64), 2)
+	})
+	e.set("hex", func(args []interface{}) interface{} {
+		if len(args) != 1 {
+			panic(fmt.Sprintf("hex expects 1 argument, got %d", len(args)))
+		}
+		return "0x" + strconv.FormatInt(args[0].(int64), 16)
+	})
 
 	return e
 }

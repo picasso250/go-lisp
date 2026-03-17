@@ -52,12 +52,30 @@ func standardEnv() *Env {
 		default: return false
 		}
 	})
+	e.set("<=", func(args []interface{}) interface{} {
+		a, b := args[0], args[1]
+		switch av := a.(type) {
+		case *big.Int: return av.Cmp(b.(*big.Int)) <= 0
+		case float64: return av <= b.(float64)
+		case string: return av <= b.(string)
+		default: return false
+		}
+	})
 	e.set(">", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		switch av := a.(type) {
 		case *big.Int: return av.Cmp(b.(*big.Int)) > 0
 		case float64: return av > b.(float64)
 		case string: return av > b.(string)
+		default: return false
+		}
+	})
+	e.set(">=", func(args []interface{}) interface{} {
+		a, b := args[0], args[1]
+		switch av := a.(type) {
+		case *big.Int: return av.Cmp(b.(*big.Int)) >= 0
+		case float64: return av >= b.(float64)
+		case string: return av >= b.(string)
 		default: return false
 		}
 	})
@@ -69,6 +87,9 @@ func standardEnv() *Env {
 			return ok && av.Cmp(bv) == 0
 		default: return a == b
 		}
+	})
+	e.set("!=", func(args []interface{}) interface{} {
+		return !e.get("=").(func([]interface{}) interface{})(args).(bool)
 	})
 
 	// Python-like Math

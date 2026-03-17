@@ -17,3 +17,4 @@
 
   (list cmp-test q-test car-test cdr-test cons-test len-test null-test let-test)
 )
+; EXPECT ["[[true true true true true true] hello 1 [2 3] [0 1 2 3] 4 true 300]"]

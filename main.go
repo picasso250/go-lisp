@@ -25,7 +25,7 @@ func (e *Env) get(s Symbol) interface{} {
 	if e.outer != nil {
 		return e.outer.get(s)
 	}
-	panic(fmt.Sprintf("Symbol not found: %s", s))
+	return nil
 }
 
 func (e *Env) set(s Symbol, val interface{}) {

@@ -1,3 +1,4 @@
 (define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))
 (fact 5)
 (fact 10)
+; EXPECT ["120", "3628800"]

@@ -46,46 +46,89 @@ func standardEnv() *Env {
 	e.set("<", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		switch av := a.(type) {
-		case *big.Int: return av.Cmp(b.(*big.Int)) < 0
-		case float64: return av < b.(float64)
-		case string: return av < b.(string)
-		default: return false
+		case *big.Int:
+			bv, ok := b.(*big.Int)
+			if !ok { panic("<: type mismatch") }
+			return av.Cmp(bv) < 0
+		case float64:
+			bv, ok := b.(float64)
+			if !ok { panic("<: type mismatch") }
+			return av < bv
+		case string:
+			bv, ok := b.(string)
+			if !ok { panic("<: type mismatch") }
+			return av < bv
+		default:
+			panic("<: incomparable type")
 		}
 	})
 	e.set("<=", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		switch av := a.(type) {
-		case *big.Int: return av.Cmp(b.(*big.Int)) <= 0
-		case float64: return av <= b.(float64)
-		case string: return av <= b.(string)
-		default: return false
+		case *big.Int:
+			bv, ok := b.(*big.Int)
+			if !ok { panic("<=: type mismatch") }
+			return av.Cmp(bv) <= 0
+		case float64:
+			bv, ok := b.(float64)
+			if !ok { panic("<=: type mismatch") }
+			return av <= bv
+		case string:
+			bv, ok := b.(string)
+			if !ok { panic("<=: type mismatch") }
+			return av <= bv
+		default:
+			panic("<=: incomparable type")
 		}
 	})
 	e.set(">", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		switch av := a.(type) {
-		case *big.Int: return av.Cmp(b.(*big.Int)) > 0
-		case float64: return av > b.(float64)
-		case string: return av > b.(string)
-		default: return false
+		case *big.Int:
+			bv, ok := b.(*big.Int)
+			if !ok { panic(">: type mismatch") }
+			return av.Cmp(bv) > 0
+		case float64:
+			bv, ok := b.(float64)
+			if !ok { panic(">: type mismatch") }
+			return av > bv
+		case string:
+			bv, ok := b.(string)
+			if !ok { panic(">: type mismatch") }
+			return av > bv
+		default:
+			panic(">: incomparable type")
 		}
 	})
 	e.set(">=", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		switch av := a.(type) {
-		case *big.Int: return av.Cmp(b.(*big.Int)) >= 0
-		case float64: return av >= b.(float64)
-		case string: return av >= b.(string)
-		default: return false
+		case *big.Int:
+			bv, ok := b.(*big.Int)
+			if !ok { panic(">=: type mismatch") }
+			return av.Cmp(bv) >= 0
+		case float64:
+			bv, ok := b.(float64)
+			if !ok { panic(">=: type mismatch") }
+			return av >= bv
+		case string:
+			bv, ok := b.(string)
+			if !ok { panic(">=: type mismatch") }
+			return av >= bv
+		default:
+			panic(">=: incomparable type")
 		}
 	})
 	e.set("=", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
+		if fmt.Sprintf("%T", a) != fmt.Sprintf("%T", b) {
+			panic("=: type mismatch")
+		}
 		switch av := a.(type) {
 		case *big.Int:
-			bv, ok := b.(*big.Int)
-			return ok && av.Cmp(bv) == 0
-		default: return a == b
+			return av.Cmp(b.(*big.Int)) == 0
+		default:
+			return a == b
 		}
 	})
 	e.set("!=", func(args []interface{}) interface{} {
@@ -125,7 +168,8 @@ func standardEnv() *Env {
 		switch v := args[0].(type) {
 		case *big.Int: f, _ := new(big.Float).SetInt(v).Float64(); return f
 		case string: f, _ := strconv.ParseFloat(v, 64); return f
-		default: return v.(float64)
+		case float64: return v
+		default: panic(fmt.Sprintf("float conversion failed: unsupported type %T", v))
 		}
 	})
 	e.set("str", func(args []interface{}) interface{} {

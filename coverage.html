@@ -55,9 +55,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">go-lisp/builtin.go (92.3%)</option>
+				<option value="file0">go-lisp/builtin.go (93.8%)</option>
 				
-				<option value="file1">go-lisp/main.go (85.8%)</option>
+				<option value="file1">go-lisp/main.go (88.4%)</option>
 				
 				</select>
 			</div>
@@ -89,17 +89,17 @@ func binaryOp(name string, opInt func(*big.Int, *big.Int) *big.Int, opFloat func
                 switch av := a.(type) </span>{
                 case *big.Int:<span class="cov8" title="1">
                         bv, ok := b.(*big.Int)
-                        if !ok </span><span class="cov0" title="0">{
+                        if !ok </span><span class="cov8" title="1">{
                                 panic(fmt.Sprintf("%s: type mismatch, expected integers", name))</span>
                         }
                         <span class="cov8" title="1">return opInt(av, bv)</span>
                 case float64:<span class="cov8" title="1">
                         bv, ok := b.(float64)
-                        if !ok </span><span class="cov0" title="0">{
+                        if !ok </span><span class="cov8" title="1">{
                                 panic(fmt.Sprintf("%s: type mismatch, expected floats", name))</span>
                         }
                         <span class="cov8" title="1">return opFloat(av, bv)</span>
-                default:<span class="cov0" title="0">
+                default:<span class="cov8" title="1">
                         panic(fmt.Sprintf("%s: invalid types", name))</span>
                 }
         }
@@ -119,46 +119,89 @@ func standardEnv() *Env <span class="cov8" title="1">{
         <span class="cov8" title="1">e.set("&lt;", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
                 switch av := a.(type) </span>{
-                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &lt; 0</span>
-                case float64:<span class="cov0" title="0"> return av &lt; b.(float64)</span>
-                case string:<span class="cov8" title="1"> return av &lt; b.(string)</span>
-                default:<span class="cov0" title="0"> return false</span>
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        if !ok </span><span class="cov8" title="1">{ panic("&lt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av.Cmp(bv) &lt; 0</span>
+                case float64:<span class="cov8" title="1">
+                        bv, ok := b.(float64)
+                        if !ok </span><span class="cov0" title="0">{ panic("&lt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &lt; bv</span>
+                case string:<span class="cov8" title="1">
+                        bv, ok := b.(string)
+                        if !ok </span><span class="cov0" title="0">{ panic("&lt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &lt; bv</span>
+                default:<span class="cov0" title="0">
+                        panic("&lt;: incomparable type")</span>
                 }
         })
         <span class="cov8" title="1">e.set("&lt;=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
                 switch av := a.(type) </span>{
-                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &lt;= 0</span>
-                case float64:<span class="cov0" title="0"> return av &lt;= b.(float64)</span>
-                case string:<span class="cov8" title="1"> return av &lt;= b.(string)</span>
-                default:<span class="cov0" title="0"> return false</span>
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        if !ok </span><span class="cov0" title="0">{ panic("&lt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av.Cmp(bv) &lt;= 0</span>
+                case float64:<span class="cov8" title="1">
+                        bv, ok := b.(float64)
+                        if !ok </span><span class="cov0" title="0">{ panic("&lt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &lt;= bv</span>
+                case string:<span class="cov8" title="1">
+                        bv, ok := b.(string)
+                        if !ok </span><span class="cov0" title="0">{ panic("&lt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &lt;= bv</span>
+                default:<span class="cov0" title="0">
+                        panic("&lt;=: incomparable type")</span>
                 }
         })
         <span class="cov8" title="1">e.set("&gt;", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
                 switch av := a.(type) </span>{
-                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &gt; 0</span>
-                case float64:<span class="cov0" title="0"> return av &gt; b.(float64)</span>
-                case string:<span class="cov8" title="1"> return av &gt; b.(string)</span>
-                default:<span class="cov0" title="0"> return false</span>
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av.Cmp(bv) &gt; 0</span>
+                case float64:<span class="cov8" title="1">
+                        bv, ok := b.(float64)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &gt; bv</span>
+                case string:<span class="cov8" title="1">
+                        bv, ok := b.(string)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &gt; bv</span>
+                default:<span class="cov0" title="0">
+                        panic("&gt;: incomparable type")</span>
                 }
         })
         <span class="cov8" title="1">e.set("&gt;=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
                 switch av := a.(type) </span>{
-                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &gt;= 0</span>
-                case float64:<span class="cov0" title="0"> return av &gt;= b.(float64)</span>
-                case string:<span class="cov8" title="1"> return av &gt;= b.(string)</span>
-                default:<span class="cov0" title="0"> return false</span>
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av.Cmp(bv) &gt;= 0</span>
+                case float64:<span class="cov8" title="1">
+                        bv, ok := b.(float64)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &gt;= bv</span>
+                case string:<span class="cov8" title="1">
+                        bv, ok := b.(string)
+                        if !ok </span><span class="cov0" title="0">{ panic("&gt;=: type mismatch")</span> }
+                        <span class="cov8" title="1">return av &gt;= bv</span>
+                default:<span class="cov0" title="0">
+                        panic("&gt;=: incomparable type")</span>
                 }
         })
         <span class="cov8" title="1">e.set("=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
-                switch av := a.(type) </span>{
+                if fmt.Sprintf("%T", a) != fmt.Sprintf("%T", b) </span><span class="cov0" title="0">{
+                        panic("=: type mismatch")</span>
+                }
+                <span class="cov8" title="1">switch av := a.(type) </span>{
                 case *big.Int:<span class="cov8" title="1">
-                        bv, ok := b.(*big.Int)
-                        return ok &amp;&amp; av.Cmp(bv) == 0</span>
-                default:<span class="cov8" title="1"> return a == b</span>
+                        return av.Cmp(b.(*big.Int)) == 0</span>
+                default:<span class="cov8" title="1">
+                        return a == b</span>
                 }
         })
         <span class="cov8" title="1">e.set("!=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
@@ -169,14 +212,14 @@ func standardEnv() *Env <span class="cov8" title="1">{
         <span class="cov8" title="1">e.set("abs", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 switch v := args[0].(type) </span>{
                 case *big.Int:<span class="cov8" title="1"> return new(big.Int).Abs(v)</span>
-                case float64:<span class="cov0" title="0"> return math.Abs(v)</span>
-                default:<span class="cov0" title="0"> panic("abs requires number")</span>
+                case float64:<span class="cov8" title="1"> return math.Abs(v)</span>
+                default:<span class="cov8" title="1"> panic("abs requires number")</span>
                 }
         })
         <span class="cov8" title="1">e.set("pow", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0], args[1]
                 if ai, ok := a.(*big.Int); ok </span><span class="cov8" title="1">{ return new(big.Int).Exp(ai, b.(*big.Int), nil) }</span>
-                <span class="cov0" title="0">return math.Pow(a.(float64), b.(float64))</span>
+                <span class="cov8" title="1">return math.Pow(a.(float64), b.(float64))</span>
         })
         <span class="cov8" title="1">e.set("divmod", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 a, b := args[0].(*big.Int), args[1].(*big.Int)
@@ -198,7 +241,8 @@ func standardEnv() *Env <span class="cov8" title="1">{
                 switch v := args[0].(type) </span>{
                 case *big.Int:<span class="cov8" title="1"> f, _ := new(big.Float).SetInt(v).Float64(); return f</span>
                 case string:<span class="cov8" title="1"> f, _ := strconv.ParseFloat(v, 64); return f</span>
-                default:<span class="cov0" title="0"> return v.(float64)</span>
+                case float64:<span class="cov8" title="1"> return v</span>
+                default:<span class="cov8" title="1"> panic(fmt.Sprintf("float conversion failed: unsupported type %T", v))</span>
                 }
         })
         <span class="cov8" title="1">e.set("str", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
@@ -274,7 +318,7 @@ func standardEnv() *Env <span class="cov8" title="1">{
         // Iterables
         <span class="cov8" title="1">e.set("range", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
                 start := int64(0); stop := args[0].(*big.Int).Int64()
-                if len(args) &gt; 1 </span><span class="cov0" title="0">{ start = stop; stop = args[1].(*big.Int).Int64() }</span>
+                if len(args) &gt; 1 </span><span class="cov8" title="1">{ start = stop; stop = args[1].(*big.Int).Int64() }</span>
                 <span class="cov8" title="1">res := List{}
                 for i := start; i &lt; stop; i++ </span><span class="cov8" title="1">{ res = append(res, big.NewInt(i)) }</span>
                 <span class="cov8" title="1">return res</span>
@@ -366,7 +410,7 @@ func (e *Env) get(s Symbol) interface{} <span class="cov8" title="1">{
         <span class="cov8" title="1">if e.outer != nil </span><span class="cov8" title="1">{
                 return e.outer.get(s)
         }</span>
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
 func (e *Env) set(s Symbol, val interface{}) <span class="cov8" title="1">{
@@ -389,9 +433,9 @@ func tokenize(s string) []string <span class="cov8" title="1">{
                                 switch r </span>{
                                 case 'n':<span class="cov8" title="1">
                                         builder.WriteRune('\n')</span>
-                                case 't':<span class="cov0" title="0">
+                                case 't':<span class="cov8" title="1">
                                         builder.WriteRune('\t')</span>
-                                case '\\':<span class="cov0" title="0">
+                                case '\\':<span class="cov8" title="1">
                                         builder.WriteRune('\\')</span>
                                 case '"':<span class="cov8" title="1">
                                         builder.WriteRune('"')</span>
@@ -556,7 +600,7 @@ func eval(x interface{}, env *Env) interface{} <span class="cov8" title="1">{
                         }
                 }
                 <span class="cov8" title="1">procRaw := eval(head, env)
-                if procRaw == nil </span><span class="cov0" title="0">{
+                if procRaw == nil </span><span class="cov8" title="1">{
                         panic(fmt.Sprintf("Symbol not found: %v", head))</span>
                 }
                 <span class="cov8" title="1">proc := procRaw.(func([]interface{}) interface{})

@@ -45,6 +45,16 @@ func TestE2E(t *testing.T) {
 			input: "(if (> 10 5) 'yes 'no) (if (< 10 5) 'yes 'no)",
 			expected: []string{"yes", "no"},
 		},
+		{
+			name:  "String Literals",
+			input: "(concat \"Hello \" \"World\") (concat \"Count: \" 5)",
+			expected: []string{"Hello World", "Count: 5"},
+		},
+		{
+			name:  "Atom? Check",
+			input: "(atom? \"str\") (atom? 123) (atom? 'sym) (atom? '(1 2))",
+			expected: []string{"true", "true", "true", "false"},
+		},
 	}
 
 	for _, tc := range cases {

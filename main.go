@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type Symbol string
@@ -39,12 +40,11 @@ func standardEnv() *Env {
 	e.set("/", func(args []interface{}) interface{} { return args[0].(float64) / args[1].(float64) })
 	
 	// Comparisons
-	e.set("<=", func(args []interface{}) interface{} { return args[0].(float64) <= args[1].(float64) })
 	e.set("<", func(args []interface{}) interface{} { return args[0].(float64) < args[1].(float64) })
-	e.set(">=", func(args []interface{}) interface{} { return args[0].(float64) >= args[1].(float64) })
 	e.set(">", func(args []interface{}) interface{} { return args[0].(float64) > args[1].(float64) })
-	e.set("=", func(args []interface{}) interface{} { return args[0].(float64) == args[1].(float64) })
-	e.set("!=", func(args []interface{}) interface{} { return args[0].(float64) != args[1].(float64) })
+	e.set("<=", func(args []interface{}) interface{} { return args[0].(float64) <= args[1].(float64) })
+	e.set(">=", func(args []interface{}) interface{} { return args[0].(float64) >= args[1].(float64) })
+	e.set("=", func(args []interface{}) interface{} { return args[0] == args[1] })
 
 	// List Operations
 	e.set("car", func(args []interface{}) interface{} { return args[0].(List)[0] })
@@ -55,15 +55,68 @@ func standardEnv() *Env {
 	e.set("list", func(args []interface{}) interface{} { return List(args) })
 	e.set("null?", func(args []interface{}) interface{} { return len(args[0].(List)) == 0 })
 	e.set("length", func(args []interface{}) interface{} { return float64(len(args[0].(List))) })
+	
+	// Atom Check
+	e.set("atom?", func(args []interface{}) interface{} {
+		_, isList := args[0].(List)
+		return !isList
+	})
+
+	// String Operations
+	e.set("concat", func(args []interface{}) interface{} {
+		res := ""
+		for _, arg := range args {
+			res += fmt.Sprintf("%v", arg)
+		}
+		return res
+	})
 
 	return e
 }
 
+// tokenize supports strings like "hello world"
 func tokenize(s string) []string {
-	s = strings.ReplaceAll(s, "(", " ( ")
-	s = strings.ReplaceAll(s, ")", " ) ")
-	s = strings.ReplaceAll(s, "'", " ' ")
-	return strings.Fields(s)
+	var tokens []string
+	var builder strings.Builder
+	inString := false
+
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '"' {
+			inString = !inString
+			builder.WriteRune(r)
+			if !inString {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
+			continue
+		}
+
+		if inString {
+			builder.WriteRune(r)
+			continue
+		}
+
+		if r == '(' || r == ')' || r == '\'' {
+			if builder.Len() > 0 {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
+			tokens = append(tokens, string(r))
+		} else if unicode.IsSpace(r) {
+			if builder.Len() > 0 {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
+		} else {
+			builder.WriteRune(r)
+		}
+	}
+	if builder.Len() > 0 {
+		tokens = append(tokens, builder.String())
+	}
+	return tokens
 }
 
 func parse(tokens []string) (interface{}, []string) {
@@ -88,19 +141,29 @@ func parse(tokens []string) (interface{}, []string) {
 		}
 		return list, rest[1:]
 	}
+
+	// Handle Strings
+	if strings.HasPrefix(token, "\"") && strings.HasSuffix(token, "\"") {
+		return token[1 : len(token)-1], rest
+	}
 	
+	// Handle Numbers
 	if f, err := strconv.ParseFloat(token, 64); err == nil {
 		return f, rest
 	}
+	
+	// Handle Symbols
 	return Symbol(token), rest
 }
 
 func eval(x interface{}, env *Env) interface{} {
 	switch v := x.(type) {
-	case Symbol:
-		return env.get(v)
-	case float64:
+	case string: // Literal String
 		return v
+	case float64: // Number
+		return v
+	case Symbol: // Symbol Lookup
+		return env.get(v)
 	case List:
 		if len(v) == 0 {
 			return nil
@@ -131,7 +194,6 @@ func eval(x interface{}, env *Env) interface{} {
 				}
 				return result
 			case "let":
-				// (let ((v1 e1) (v2 e2)) body)
 				bindings := v[1].(List)
 				body := v[2]
 				newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
@@ -154,6 +216,7 @@ func eval(x interface{}, env *Env) interface{} {
 				}
 			}
 		}
+		// Function call
 		proc := eval(head, env).(func([]interface{}) interface{})
 		var args []interface{}
 		for _, arg := range v[1:] {
@@ -171,8 +234,10 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		input += " " + line
-		if strings.Count(input, "(") == strings.Count(input, ")") && strings.Contains(input, "(") {
+		if strings.Count(input, "(") == strings.Count(input, ")") && 
+		   strings.Count(input, "\"")%2 == 0 {
 			tokens := tokenize(input)
+			if len(tokens) == 0 { continue }
 			for len(tokens) > 0 {
 				var exp interface{}
 				exp, tokens = parse(tokens)

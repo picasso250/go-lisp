@@ -140,9 +140,11 @@ func parse(tokens []string) (interface{}, []string) {
 
 func eval(x interface{}, env *Env) interface{} {
 	switch v := x.(type) {
-	case string, float64, *big.Int:
+	case string, float64, *big.Int, bool:
 		return v
 	case Symbol:
+		if v == "true" { return true }
+		if v == "false" { return false }
 		return env.get(v)
 	case List:
 		if len(v) == 0 {
@@ -159,8 +161,8 @@ func eval(x interface{}, env *Env) interface{} {
 				env.set(name, val)
 				return nil
 			case "if":
-				test := eval(v[1], env).(bool)
-				if test {
+				test := eval(v[1], env)
+				if test == true {
 					return eval(v[2], env)
 				}
 				if len(v) > 3 {
@@ -206,8 +208,30 @@ func eval(x interface{}, env *Env) interface{} {
 	return nil
 }
 
+func evalString(input string, env *Env, quiet bool) {
+	tokens := tokenize(input)
+	for len(tokens) > 0 {
+		var exp interface{}
+		exp, tokens = parse(tokens)
+		result := eval(exp, env)
+		if !quiet && result != nil {
+			if bi, ok := result.(*big.Int); ok {
+				fmt.Println(bi.String())
+			} else {
+				fmt.Printf("%v\n", result)
+			}
+		}
+	}
+}
+
 func main() {
 	env := standardEnv()
+	
+	// Load stdlib if exists
+	if content, err := os.ReadFile("stdlib.lisp"); err == nil {
+		evalString(string(content), env, true)
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	var input string
 	for scanner.Scan() {
@@ -215,19 +239,7 @@ func main() {
 		input += " " + line
 		if strings.Count(input, "(") == strings.Count(input, ")") && 
 		   strings.Count(input, "\"")%2 == 0 {
-			tokens := tokenize(input)
-			for len(tokens) > 0 {
-				var exp interface{}
-				exp, tokens = parse(tokens)
-				result := eval(exp, env)
-				if result != nil {
-					if bi, ok := result.(*big.Int); ok {
-						fmt.Println(bi.String())
-					} else {
-						fmt.Printf("%v\n", result)
-					}
-				}
-			}
+			evalString(input, env, false)
 			input = ""
 		}
 	}

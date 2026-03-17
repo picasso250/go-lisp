@@ -60,6 +60,21 @@ func TestE2E(t *testing.T) {
 			input: "(string-length \"hello\") (string-contains? \"hello\" \"ell\") (string-replace \"abcabc\" \"a\" \"x\")",
 			expected: []string{"5", "true", "xbcxbc"},
 		},
+		{
+			name:  "Functional Filter & Reduce",
+			input: "(filter (lambda (x) (> x 1)) '(1 2 3)) (reduce (lambda (acc x) (+ acc x)) '(1 2 3) 0)",
+			expected: []string{"[2 3]", "6"},
+		},
+		{
+			name:  "File Operations",
+			input: "(write-file \"tmp.txt\" \"hello file\") (read-file \"tmp.txt\")",
+			expected: []string{"true", "hello file"},
+		},
+		{
+			name:  "Stdlib Functions",
+			input: "(not true) (not false) (even? 4) (even? 5) (foldl + '(1 2 3) 10)",
+			expected: []string{"false", "true", "true", "false", "16"},
+		},
 	}
 
 	for _, tc := range cases {

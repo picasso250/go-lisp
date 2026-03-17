@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -37,6 +38,7 @@ func standardEnv() *Env {
 	e.set("-", binaryOp("-", func(a, b *big.Int) *big.Int { return new(big.Int).Sub(a, b) }, func(a, b float64) float64 { return a - b }))
 	e.set("*", binaryOp("*", func(a, b *big.Int) *big.Int { return new(big.Int).Mul(a, b) }, func(a, b float64) float64 { return a * b }))
 	e.set("/", binaryOp("/", func(a, b *big.Int) *big.Int { return new(big.Int).Div(a, b) }, func(a, b float64) float64 { return a / b }))
+	e.set("%", binaryOp("%", func(a, b *big.Int) *big.Int { return new(big.Int).Mod(a, b) }, func(a, b float64) float64 { panic("modulo not supported for floats") }))
 
 	// Comparisons
 	e.set("<", func(args []interface{}) interface{} {
@@ -175,6 +177,26 @@ func standardEnv() *Env {
 		}
 		return res
 	})
+	e.set("filter", func(args []interface{}) interface{} {
+		fn := args[0].(func([]interface{}) interface{})
+		l := args[1].(List)
+		res := List{}
+		for _, v := range l {
+			if test := fn([]interface{}{v}); test.(bool) {
+				res = append(res, v)
+			}
+		}
+		return res
+	})
+	e.set("reduce", func(args []interface{}) interface{} {
+		fn := args[0].(func([]interface{}) interface{})
+		l := args[1].(List)
+		acc := args[2]
+		for _, v := range l {
+			acc = fn([]interface{}{acc, v})
+		}
+		return acc
+	})
 
 	// String Operations
 	e.set("concat", func(args []interface{}) interface{} {
@@ -202,6 +224,24 @@ func standardEnv() *Env {
 	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
 	e.set("string-replace", func(args []interface{}) interface{} {
 		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
+	})
+
+	// File Operations
+	e.set("read-file", func(args []interface{}) interface{} {
+		path := args[0].(string)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+		return string(content)
+	})
+	e.set("write-file", func(args []interface{}) interface{} {
+		path, content := args[0].(string), args[1].(string)
+		err := os.WriteFile(path, []byte(content), 0644)
+		if err != nil {
+			panic(err)
+		}
+		return true
 	})
 
 	return e

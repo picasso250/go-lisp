@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"math"
 	"math/big"
@@ -156,6 +157,37 @@ func standardEnv() *Env {
 	})
 	e.set("reversed", e.get("reverse"))
 
+	// Dictionary Ops
+	e.set("dict", func(args []interface{}) interface{} {
+		d := make(Dict)
+		for i := 0; i < len(args); i += 2 {
+			d[args[i].(string)] = args[i+1]
+		}
+		return d
+	})
+	e.set("dict-get", func(args []interface{}) interface{} {
+		d, key := args[0].(Dict), args[1].(string)
+		return d[key]
+	})
+	e.set("dict-set!", func(args []interface{}) interface{} {
+		d, key, val := args[0].(Dict), args[1].(string), args[2]
+		d[key] = val
+		return val
+	})
+	e.set("dict-keys", func(args []interface{}) interface{} {
+		d := args[0].(Dict)
+		keys := make(List, 0, len(d))
+		for k := range d {
+			keys = append(keys, k)
+		}
+		return keys
+	})
+	e.set("dict-has?", func(args []interface{}) interface{} {
+		d, key := args[0].(Dict), args[1].(string)
+		_, ok := d[key]
+		return ok
+	})
+
 	// String Ops
 	e.set("concat", func(args []interface{}) interface{} {
 		res := ""
@@ -251,6 +283,16 @@ func standardEnv() *Env {
 			if bi, ok := arg.(*big.Int); ok { fmt.Print(bi.String()) } else { fmt.Print(arg) }
 		}
 		fmt.Println(); return nil
+	})
+	e.set("input", func(args []interface{}) interface{} {
+		if len(args) > 0 {
+			fmt.Print(args[0])
+		}
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			return scanner.Text()
+		}
+		return ""
 	})
 	e.set("type", func(args []interface{}) interface{} { return fmt.Sprintf("%T", args[0]) })
 	e.set("bin", func(args []interface{}) interface{} { return "0b" + args[0].(*big.Int).Text(2) })

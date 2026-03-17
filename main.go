@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"math/big"
@@ -13,6 +14,7 @@ import (
 
 type Symbol string
 type List []interface{}
+type Dict map[string]interface{}
 
 type Env struct {
 	vars  map[Symbol]interface{}
@@ -112,10 +114,13 @@ func parse(tokens []string) (interface{}, []string) {
 	}
 	if token == "(" {
 		var list List
-		for rest[0] != ")" {
+		for len(rest) > 0 && rest[0] != ")" {
 			var item interface{}
 			item, rest = parse(rest)
 			list = append(list, item)
+		}
+		if len(rest) == 0 {
+			panic("unexpected EOF: missing )")
 		}
 		return list, rest[1:]
 	}
@@ -248,6 +253,10 @@ func evalString(w io.Writer, input string, env *Env, quiet bool) interface{} {
 }
 
 func main() {
+	fileFlag := flag.String("f", "", "Execute file")
+	codeFlag := flag.String("c", "", "Execute code string")
+	flag.Parse()
+
 	env := standardEnv()
 	
 	// Load stdlib if exists
@@ -255,6 +264,22 @@ func main() {
 		evalString(io.Discard, string(content), env, true)
 	}
 
+	if *codeFlag != "" {
+		evalString(os.Stdout, *codeFlag, env, false)
+		return
+	}
+
+	if *fileFlag != "" {
+		content, err := os.ReadFile(*fileFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
+			os.Exit(1)
+		}
+		evalString(os.Stdout, string(content), env, false)
+		return
+	}
+
+	// Default to REPL
 	scanner := bufio.NewScanner(os.Stdin)
 	var input string
 	for scanner.Scan() {

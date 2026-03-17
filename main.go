@@ -52,14 +52,17 @@ func tokenize(s string) []string {
 			if escaped {
 				switch r {
 				case 'n':
-					builder.WriteRune('\n')
+				        builder.WriteRune('\n')
+				case 'r':
+				        builder.WriteRune('\r')
 				case 't':
-					builder.WriteRune('\t')
+				        builder.WriteRune('\t')
 				case '\\':
-					builder.WriteRune('\\')
+				        builder.WriteRune('\\')
 				case '"':
-					builder.WriteRune('"')
+				        builder.WriteRune('"')
 				default:
+
 					builder.WriteRune('\\')
 					builder.WriteRune(r)
 				}

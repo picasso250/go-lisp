@@ -84,6 +84,18 @@ func tokenize(s string) []string {
 			continue
 		}
 
+		if r == ';' {
+			// Skip until newline
+			if builder.Len() > 0 {
+				tokens = append(tokens, builder.String())
+				builder.Reset()
+			}
+			for i+1 < len(runes) && runes[i+1] != '\n' {
+				i++
+			}
+			continue
+		}
+
 		if unicode.IsSpace(r) {
 			if builder.Len() > 0 {
 				tokens = append(tokens, builder.String())

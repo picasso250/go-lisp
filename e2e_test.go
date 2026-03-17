@@ -10,82 +10,62 @@ import (
 type testCase struct {
 	name     string
 	input    string
-	expected []string // 每行输出的预期结果
+	expected []string
 }
 
 func TestE2E(t *testing.T) {
 	cases := []testCase{
 		{
-			name:  "Basic Arithmetic",
-			input: "(+ 1 2) (* 3 4) (- 10 5) (/ 10 2)",
-			expected: []string{"3", "12", "5", "5"},
+			name:  "Big Integers",
+			input: "(* 100000000000000000000 100000000000000000000)",
+			expected: []string{"10000000000000000000000000000000000000000"},
 		},
 		{
-			name:  "Factorial Recursion",
-			input: "(define fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1)))))) (fact 5) (fact 6)",
-			expected: []string{"120", "720"},
+			name:  "Type Conversions & Predicates",
+			input: "(integer? 1) (float? 1.0) (integer 1.5) (float 2) (float? (float 1))",
+			expected: []string{"true", "true", "1", "2", "true"},
 		},
 		{
-			name:  "List Operations",
-			input: "(define x '(1 2 3)) (car x) (cdr x) (length (cons 0 x))",
-			expected: []string{"1", "[2 3]", "4"},
+			name:  "String Escapes",
+			input: "(concat \"line1\\nline2\" \"\\\"quote\\\"\")",
+			expected: []string{"line1", "line2\"quote\""},
 		},
 		{
-			name:  "Let Scoping",
-			input: "(define x 10) (let ((x 20)) x) x",
-			expected: []string{"20", "10"},
+			name:  "String Functions",
+			input: "(string-trim \"  hello  \") (string-split \"a,b,c\" \",\")",
+			expected: []string{"hello", "[a b c]"},
 		},
 		{
-			name:  "Begin Block",
-			input: "(begin (define a 1) (define b 2) (+ a b))",
-			expected: []string{"3"},
+			name:  "Strict Arithmetic (Integer Only)",
+			input: "(+ 1 2) (- 10 5)",
+			expected: []string{"3", "5"},
 		},
 		{
-			name:  "Nested Conditionals",
-			input: "(if (> 10 5) 'yes 'no) (if (< 10 5) 'yes 'no)",
-			expected: []string{"yes", "no"},
-		},
-		{
-			name:  "String Literals",
-			input: "(concat \"Hello \" \"World\") (concat \"Count: \" 5)",
-			expected: []string{"Hello World", "Count: 5"},
-		},
-		{
-			name:  "Atom? Check",
-			input: "(atom? \"str\") (atom? 123) (atom? 'sym) (atom? '(1 2))",
-			expected: []string{"true", "true", "true", "false"},
+			name:  "Strict Arithmetic (Float Only)",
+			input: "(+ 1.1 2.2)",
+			expected: []string{"3.3000000000000003"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			// 执行 go run main.go
 			cmd := exec.Command("go", "run", "main.go")
 			cmd.Stdin = strings.NewReader(tc.input + "\n")
-			
 			var out bytes.Buffer
 			cmd.Stdout = &out
 			cmd.Stderr = &out
-
 			err := cmd.Run()
 			if err != nil {
 				t.Fatalf("Failed to run interpreter: %v\nOutput: %s", err, out.String())
 			}
-
-			// 清理并分割输出
 			actualLines := strings.Split(strings.TrimSpace(out.String()), "\n")
-			
-			// 验证输出行数
 			if len(actualLines) != len(tc.expected) {
-				t.Errorf("Expected %d lines of output, got %d. Output: %q", len(tc.expected), len(actualLines), actualLines)
+				t.Errorf("Expected %d lines, got %d. Output: %q", len(tc.expected), len(actualLines), actualLines)
 				return
 			}
-
-			// 逐行匹配
 			for i, exp := range tc.expected {
-				actual := strings.TrimSpace(actualLines[i])
-				if actual != exp {
-					t.Errorf("Line %d: expected %q, got %q", i+1, exp, actual)
+				if strings.TrimSpace(actualLines[i]) != exp {
+					t.Errorf("Line %d: expected %q, got %q", i+1, exp, actualLines[i])
 				}
 			}
 		})

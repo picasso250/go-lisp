@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -44,21 +44,32 @@ func TestE2E(t *testing.T) {
 				t.Fatalf("Failed to parse expected output in %s: %v", path, err)
 			}
 
-			// Prepare input (everything except the last line)
 			input := strings.Join(lines[:len(lines)-1], "\n")
 
-			cmd := exec.Command("go", "run", ".")
-			cmd.Stdin = strings.NewReader(input + "\n")
-			var out bytes.Buffer
-			cmd.Stdout = &out
-			cmd.Stderr = &out
-			err = cmd.Run()
-			if err != nil {
-				t.Fatalf("Failed to run interpreter for %s: %v\nOutput: %s", path, err, out.String())
+			env := standardEnv()
+			if stdlib, err := os.ReadFile("stdlib.lisp"); err == nil {
+				evalString(io.Discard, string(stdlib), env, true)
 			}
 
-			actualLines := strings.Split(strings.TrimSpace(out.String()), "\n")
-			// Filter out empty lines if any
+			// 捕获 Stdout
+			old := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			var buffer bytes.Buffer
+			// evalString 写入 buffer，而内置 print 写入 os.Stdout (此时是 w)
+			evalString(&buffer, input, env, false)
+
+			w.Close()
+			os.Stdout = old
+
+			var stdoutBuffer bytes.Buffer
+			io.Copy(&stdoutBuffer, r)
+
+			// 合并来自 evalString 的输出和来自内置 print 的输出
+			combinedOutput := buffer.String() + stdoutBuffer.String()
+
+			actualLines := strings.Split(strings.TrimSpace(combinedOutput), "\n")
 			var filteredActual []string
 			for _, l := range actualLines {
 				if strings.TrimSpace(l) != "" {

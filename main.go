@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"strconv"
@@ -214,7 +215,11 @@ func eval(x interface{}, env *Env) interface{} {
 				}
 			}
 		}
-		proc := eval(head, env).(func([]interface{}) interface{})
+		procRaw := eval(head, env)
+		if procRaw == nil {
+			panic(fmt.Sprintf("Symbol not found: %v", head))
+		}
+		proc := procRaw.(func([]interface{}) interface{})
 		var args []interface{}
 		for _, arg := range v[1:] {
 			args = append(args, eval(arg, env))
@@ -224,20 +229,22 @@ func eval(x interface{}, env *Env) interface{} {
 	return nil
 }
 
-func evalString(input string, env *Env, quiet bool) {
+func evalString(w io.Writer, input string, env *Env, quiet bool) interface{} {
 	tokens := tokenize(input)
+	var lastResult interface{}
 	for len(tokens) > 0 {
 		var exp interface{}
 		exp, tokens = parse(tokens)
-		result := eval(exp, env)
-		if !quiet && result != nil {
-			if bi, ok := result.(*big.Int); ok {
-				fmt.Println(bi.String())
+		lastResult = eval(exp, env)
+		if !quiet && lastResult != nil {
+			if bi, ok := lastResult.(*big.Int); ok {
+				fmt.Fprintln(w, bi.String())
 			} else {
-				fmt.Printf("%v\n", result)
+				fmt.Fprintf(w, "%v\n", lastResult)
 			}
 		}
 	}
+	return lastResult
 }
 
 func main() {
@@ -245,7 +252,7 @@ func main() {
 	
 	// Load stdlib if exists
 	if content, err := os.ReadFile("stdlib.lisp"); err == nil {
-		evalString(string(content), env, true)
+		evalString(io.Discard, string(content), env, true)
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -255,7 +262,7 @@ func main() {
 		input += " " + line
 		if strings.Count(input, "(") == strings.Count(input, ")") && 
 		   strings.Count(input, "\"")%2 == 0 {
-			evalString(input, env, false)
+			evalString(os.Stdout, input, env, false)
 			input = ""
 		}
 	}

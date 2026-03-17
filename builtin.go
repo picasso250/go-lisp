@@ -209,8 +209,19 @@ func standardEnv() *Env {
 	e.set("sorted", func(args []interface{}) interface{} {
 		l := append(List{}, args[0].(List)...)
 		sort.Slice(l, func(i, j int) bool {
-			if ai, ok := l[i].(*big.Int); ok { return ai.Cmp(l[j].(*big.Int)) < 0 }
-			return l[i].(float64) < l[j].(float64)
+			switch av := l[i].(type) {
+			case *big.Int:
+				bv, ok := l[j].(*big.Int)
+				return ok && av.Cmp(bv) < 0
+			case float64:
+				bv, ok := l[j].(float64)
+				return ok && av < bv
+			case string:
+				bv, ok := l[j].(string)
+				return ok && av < bv
+			default:
+				return false
+			}
 		})
 		return l
 	})

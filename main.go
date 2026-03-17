@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"strconv"
 	"strings"
@@ -17,6 +16,11 @@ type List []interface{}
 type Dict map[string]interface{}
 type TCPListener interface{}
 type TCPConn interface{}
+
+type TailCall struct {
+	exp interface{}
+	env *Env
+}
 
 type Env struct {
 	vars  map[Symbol]interface{}
@@ -170,15 +174,14 @@ func parse(tokens []string) (interface{}, []string) {
 		return token[1 : len(token)-1], rest
 	}
 
-	// Big Integer or Float
+	// Integer or Float
 	if strings.ContainsAny(token, ".eE") {
 		if f, err := strconv.ParseFloat(token, 64); err == nil {
 			return f, rest
 		}
 	} else {
-		bi := new(big.Int)
-		if _, ok := bi.SetString(token, 10); ok {
-			return bi, rest
+		if i, err := strconv.ParseInt(token, 10, 64); err == nil {
+			return i, rest
 		}
 	}
 
@@ -186,138 +189,181 @@ func parse(tokens []string) (interface{}, []string) {
 }
 
 func eval(x interface{}, env *Env) interface{} {
-	switch v := x.(type) {
-	case string, float64, *big.Int, bool:
-		return v
-	case Symbol:
-		if v == "true" {
-			return true
-		}
-		if v == "false" {
-			return false
-		}
-		return env.get(v)
-	case List:
-		if len(v) == 0 {
-			return nil
-		}
-		head := v[0]
-		if s, ok := head.(Symbol); ok {
-			switch s {
-			case "set!":
-				name := v[1].(Symbol)
-				val := eval(v[2], env)
-				if !env.update(name, val) {
-					panic(fmt.Sprintf("set!: undefined variable %s", name))
-				}
+	for {
+		switch v := x.(type) {
+		case string, float64, int64, bool:
+			return v
+		case Symbol:
+			if v == "true" {
+				return true
+			}
+			if v == "false" {
+				return false
+			}
+			if v == "nil" {
 				return nil
-			case "quote":
-				return v[1]
-			case "define":
-				if head, ok := v[1].(List); ok {
-					name := head[0].(Symbol)
-					params := head[1:]
-					var body interface{}
-					if len(v) > 3 {
-						body = append(List{Symbol("begin")}, v[2:]...)
-					} else {
-						body = v[2]
+			}
+			res := env.get(v)
+			return res
+		case List:
+			if len(v) == 0 {
+				return nil
+			}
+			head := v[0]
+			if s, ok := head.(Symbol); ok {
+				switch s {
+				case "set!":
+					name := v[1].(Symbol)
+					val := eval(v[2], env)
+					if !env.update(name, val) {
+						panic(fmt.Sprintf("set!: undefined variable %s", name))
 					}
-					val := func(args []interface{}) interface{} {
-						newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
+					return nil
+				case "quote":
+					return v[1]
+				case "define":
+					if h, ok := v[1].(List); ok {
+						name := h[0].(Symbol)
+						params := h[1:]
+						var body interface{}
+						if len(v) > 3 {
+							body = append(List{Symbol("begin")}, v[2:]...)
+						} else {
+							body = v[2]
+						}
+						capturedEnv := env
+						val := func(args []interface{}) interface{} {
+							newEnv := &Env{vars: make(map[Symbol]interface{}), outer: capturedEnv}
+							for i, p := range params {
+								newEnv.set(p.(Symbol), args[i])
+							}
+							return TailCall{exp: body, env: newEnv}
+						}
+						env.set(name, val)
+						return nil
+					}
+					name := v[1].(Symbol)
+					val := eval(v[2], env)
+					env.set(name, val)
+					return nil
+				case "if":
+					test := eval(v[1], env)
+					if test == true {
+						x = v[2]
+					} else if len(v) > 3 {
+						x = v[3]
+					} else {
+						return nil
+					}
+					continue
+				case "begin":
+					for i := 1; i < len(v)-1; i++ {
+						eval(v[i], env)
+					}
+					x = v[len(v)-1]
+					continue
+				case "and":
+					if len(v) == 1 {
+						return true
+					}
+					for i := 1; i < len(v)-1; i++ {
+						res := eval(v[i], env)
+						if res == false {
+							return false
+						}
+					}
+					x = v[len(v)-1]
+					continue
+				case "or":
+					if len(v) == 1 {
+						return false
+					}
+					for i := 1; i < len(v)-1; i++ {
+						res := eval(v[i], env)
+						if res == true {
+							return true
+						}
+					}
+					x = v[len(v)-1]
+					continue
+				case "let":
+					bindings := v[1].(List)
+					body := v[2]
+					newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
+					for _, b := range bindings {
+						bind := b.(List)
+						name := bind[0].(Symbol)
+						val := eval(bind[1], env)
+						newEnv.set(name, val)
+					}
+					x = body
+					env = newEnv
+					continue
+				case "lambda":
+					params := v[1].(List)
+					body := v[2]
+					capturedEnv := env
+					return func(args []interface{}) interface{} {
+						newEnv := &Env{vars: make(map[Symbol]interface{}), outer: capturedEnv}
 						for i, p := range params {
 							newEnv.set(p.(Symbol), args[i])
 						}
-						return eval(body, newEnv)
+						return TailCall{exp: body, env: newEnv}
 					}
-					env.set(name, val)
-					return nil
-				}
-				name := v[1].(Symbol)
-				val := eval(v[2], env)
-				env.set(name, val)
-				return nil
-			case "if":
-				test := eval(v[1], env)
-				if test == true {
-					return eval(v[2], env)
-				}
-				if len(v) > 3 {
-					return eval(v[3], env)
-				}
-				return nil
-			case "begin":
-				var result interface{}
-				for _, exp := range v[1:] {
-					result = eval(exp, env)
-				}
-				return result
-			case "and":
-				for _, exp := range v[1:] {
-					res := eval(exp, env)
-					if res == false {
-						return false
-					}
-				}
-				return true
-			case "or":
-				for _, exp := range v[1:] {
-					res := eval(exp, env)
-					if res == true {
-						return true
-					}
-				}
-				return false
-			case "let":
-				bindings := v[1].(List)
-				body := v[2]
-				newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
-				for _, b := range bindings {
-					bind := b.(List)
-					name := bind[0].(Symbol)
-					val := eval(bind[1], env)
-					newEnv.set(name, val)
-				}
-				return eval(body, newEnv)
-			case "lambda":
-				params := v[1].(List)
-				body := v[2]
-				return func(args []interface{}) interface{} {
-					newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
-					for i, p := range params {
-						newEnv.set(p.(Symbol), args[i])
-					}
-					return eval(body, newEnv)
 				}
 			}
+			// Function application
+			procRaw := eval(head, env)
+			proc, ok := procRaw.(func([]interface{}) interface{})
+			if !ok {
+				panic(fmt.Sprintf("Not a function: %v", head))
+			}
+			var args []interface{}
+			for i := 1; i < len(v); i++ {
+				argVal := eval(v[i], env)
+				// Resolve TailCall from argument evaluation
+				for {
+					if tc, ok := argVal.(TailCall); ok {
+						argVal = eval(tc.exp, tc.env)
+					} else {
+						break
+					}
+				}
+				args = append(args, argVal)
+			}
+			result := proc(args)
+			if tc, ok := result.(TailCall); ok {
+				x = tc.exp
+				env = tc.env
+				continue
+			}
+			return result
+		default:
+			return v
 		}
-		procRaw := eval(head, env)
-		if procRaw == nil {
-			panic(fmt.Sprintf("Symbol not found: %v", head))
-		}
-		proc := procRaw.(func([]interface{}) interface{})
-		var args []interface{}
-		for _, arg := range v[1:] {
-			args = append(args, eval(arg, env))
-		}
-		return proc(args)
 	}
-	return nil
 }
 
 func evalString(w io.Writer, input string, env *Env, quiet bool) interface{} {
 	tokens := tokenize(input)
 	var lastResult interface{}
-	for len(tokens) > 0 {
+	for {
+		if len(tokens) == 0 {
+			break
+		}
 		var exp interface{}
 		exp, tokens = parse(tokens)
 		lastResult = eval(exp, env)
-		if !quiet && lastResult != nil {
-			if bi, ok := lastResult.(*big.Int); ok {
-				fmt.Fprintln(w, bi.String())
+		// Resolve final TailCall
+		for {
+			if tc, ok := lastResult.(TailCall); ok {
+				lastResult = eval(tc.exp, tc.env)
 			} else {
-				fmt.Fprintf(w, "%v\n", lastResult)
+				break
 			}
+		}
+		if !quiet && lastResult != nil {
+			fmt.Fprintf(w, "%v\n", lastResult)
 		}
 	}
 	return lastResult

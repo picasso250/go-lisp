@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"net"
 	"os"
 	"sort"
@@ -20,14 +19,25 @@ func mustSameType(name string, a, b interface{}) {
 	}
 }
 
+// resolve evaluates TailCall to final value
+func resolve(val interface{}) interface{} {
+	for {
+		if tc, ok := val.(TailCall); ok {
+			val = eval(tc.exp, tc.env)
+		} else {
+			return val
+		}
+	}
+}
+
 // binaryOp 算术运算工厂
-func binaryOp(name string, opInt func(*big.Int, *big.Int) *big.Int, opFloat func(float64, float64) float64) func([]interface{}) interface{} {
+func binaryOp(name string, opInt func(int64, int64) int64, opFloat func(float64, float64) float64) func([]interface{}) interface{} {
 	return func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		mustSameType(name, a, b)
 		switch av := a.(type) {
-		case *big.Int:
-			return opInt(av, b.(*big.Int))
+		case int64:
+			return opInt(av, b.(int64))
 		case float64:
 			return opFloat(av, b.(float64))
 		default:
@@ -37,13 +47,13 @@ func binaryOp(name string, opInt func(*big.Int, *big.Int) *big.Int, opFloat func
 }
 
 // compareOp 比较运算工厂
-func compareOp(name string, opInt func(*big.Int, *big.Int) bool, opFloat func(float64, float64) bool, opStr func(string, string) bool) func([]interface{}) interface{} {
+func compareOp(name string, opInt func(int64, int64) bool, opFloat func(float64, float64) bool, opStr func(string, string) bool) func([]interface{}) interface{} {
 	return func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		mustSameType(name, a, b)
 		switch av := a.(type) {
-		case *big.Int:
-			return opInt(av, b.(*big.Int))
+		case int64:
+			return opInt(av, b.(int64))
 		case float64:
 			return opFloat(av, b.(float64))
 		case string:
@@ -58,24 +68,21 @@ func standardEnv() *Env {
 	e := &Env{vars: make(map[Symbol]interface{}), outer: nil}
 
 	// Basic Arithmetic
-	e.set("+", binaryOp("+", func(a, b *big.Int) *big.Int { return new(big.Int).Add(a, b) }, func(a, b float64) float64 { return a + b }))
-	e.set("-", binaryOp("-", func(a, b *big.Int) *big.Int { return new(big.Int).Sub(a, b) }, func(a, b float64) float64 { return a - b }))
-	e.set("*", binaryOp("*", func(a, b *big.Int) *big.Int { return new(big.Int).Mul(a, b) }, func(a, b float64) float64 { return a * b }))
-	e.set("/", binaryOp("/", func(a, b *big.Int) *big.Int { return new(big.Int).Div(a, b) }, func(a, b float64) float64 { return a / b }))
-	e.set("%", binaryOp("%", func(a, b *big.Int) *big.Int { return new(big.Int).Mod(a, b) }, func(a, b float64) float64 { return math.Mod(a, b) }))
+	e.set("+", binaryOp("+", func(a, b int64) int64 { return a + b }, func(a, b float64) float64 { return a + b }))
+	e.set("-", binaryOp("-", func(a, b int64) int64 { return a - b }, func(a, b float64) float64 { return a - b }))
+	e.set("*", binaryOp("*", func(a, b int64) int64 { return a * b }, func(a, b float64) float64 { return a * b }))
+	e.set("/", binaryOp("/", func(a, b int64) int64 { return a / b }, func(a, b float64) float64 { return a / b }))
+	e.set("%", binaryOp("%", func(a, b int64) int64 { return a % b }, func(a, b float64) float64 { return math.Mod(a, b) }))
 
 	// Comparisons
-	e.set("<", compareOp("<", func(a, b *big.Int) bool { return a.Cmp(b) < 0 }, func(a, b float64) bool { return a < b }, func(a, b string) bool { return a < b }))
-	e.set("<=", compareOp("<=", func(a, b *big.Int) bool { return a.Cmp(b) <= 0 }, func(a, b float64) bool { return a <= b }, func(a, b string) bool { return a <= b }))
-	e.set(">", compareOp(">", func(a, b *big.Int) bool { return a.Cmp(b) > 0 }, func(a, b float64) bool { return a > b }, func(a, b string) bool { return a > b }))
-	e.set(">=", compareOp(">=", func(a, b *big.Int) bool { return a.Cmp(b) >= 0 }, func(a, b float64) bool { return a >= b }, func(a, b string) bool { return a >= b }))
+	e.set("<", compareOp("<", func(a, b int64) bool { return a < b }, func(a, b float64) bool { return a < b }, func(a, b string) bool { return a < b }))
+	e.set("<=", compareOp("<=", func(a, b int64) bool { return a <= b }, func(a, b float64) bool { return a <= b }, func(a, b string) bool { return a <= b }))
+	e.set(">", compareOp(">", func(a, b int64) bool { return a > b }, func(a, b float64) bool { return a > b }, func(a, b string) bool { return a > b }))
+	e.set(">=", compareOp(">=", func(a, b int64) bool { return a >= b }, func(a, b float64) bool { return a >= b }, func(a, b string) bool { return a >= b }))
 
 	e.set("=", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
 		mustSameType("=", a, b)
-		if bi, ok := a.(*big.Int); ok {
-			return bi.Cmp(b.(*big.Int)) == 0
-		}
 		return a == b
 	})
 	e.set("!=", func(args []interface{}) interface{} {
@@ -85,8 +92,11 @@ func standardEnv() *Env {
 	// Python-like Math
 	e.set("abs", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
-		case *big.Int:
-			return new(big.Int).Abs(v)
+		case int64:
+			if v < 0 {
+				return -v
+			}
+			return v
 		case float64:
 			return math.Abs(v)
 		default:
@@ -95,15 +105,14 @@ func standardEnv() *Env {
 	})
 	e.set("pow", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
-		if ai, ok := a.(*big.Int); ok {
-			return new(big.Int).Exp(ai, b.(*big.Int), nil)
+		if ai, ok := a.(int64); ok {
+			return int64(math.Pow(float64(ai), float64(b.(int64))))
 		}
 		return math.Pow(a.(float64), b.(float64))
 	})
 	e.set("divmod", func(args []interface{}) interface{} {
-		a, b := args[0].(*big.Int), args[1].(*big.Int)
-		q, r := new(big.Int).DivMod(a, b, new(big.Int))
-		return List{q, r}
+		a, b := args[0].(int64), args[1].(int64)
+		return List{a / b, a % b}
 	})
 	e.set("round", func(args []interface{}) interface{} { return math.Round(args[0].(float64)) })
 
@@ -111,21 +120,19 @@ func standardEnv() *Env {
 	e.set("int", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
 		case float64:
-			return big.NewInt(int64(v))
+			return int64(v)
 		case string:
-			bi := new(big.Int)
-			bi.SetString(v, 10)
-			return bi
+			i, _ := strconv.ParseInt(v, 10, 64)
+			return i
 		default:
-			return v.(*big.Int)
+			return v.(int64)
 		}
 	})
 	e.set("integer", e.get("int")) // alias
 	e.set("float", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
-		case *big.Int:
-			f, _ := new(big.Float).SetInt(v).Float64()
-			return f
+		case int64:
+			return float64(v)
 		case string:
 			f, _ := strconv.ParseFloat(v, 64)
 			return f
@@ -136,16 +143,13 @@ func standardEnv() *Env {
 		}
 	})
 	e.set("str", func(args []interface{}) interface{} {
-		if bi, ok := args[0].(*big.Int); ok {
-			return bi.String()
-		}
 		return fmt.Sprintf("%v", args[0])
 	})
 	e.set("bool", func(args []interface{}) interface{} {
 		if args[0] == nil || args[0] == false {
 			return false
 		}
-		if bi, ok := args[0].(*big.Int); ok && bi.Sign() == 0 {
+		if i, ok := args[0].(int64); ok && i == 0 {
 			return false
 		}
 		if f, ok := args[0].(float64); ok && f == 0 {
@@ -159,7 +163,7 @@ func standardEnv() *Env {
 		}
 		return true
 	})
-	e.set("integer?", func(args []interface{}) interface{} { _, ok := args[0].(*big.Int); return ok })
+	e.set("integer?", func(args []interface{}) interface{} { _, ok := args[0].(int64); return ok })
 	e.set("float?", func(args []interface{}) interface{} { _, ok := args[0].(float64); return ok })
 	e.set("string?", func(args []interface{}) interface{} { _, ok := args[0].(string); return ok })
 	e.set("list?", func(args []interface{}) interface{} { _, ok := args[0].(List); return ok })
@@ -173,7 +177,7 @@ func standardEnv() *Env {
 	e.set("cons", func(args []interface{}) interface{} { return append(List{args[0]}, args[1].(List)...) })
 	e.set("list", func(args []interface{}) interface{} { return List(args) })
 	e.set("null?", func(args []interface{}) interface{} { return len(args[0].(List)) == 0 })
-	e.set("length", func(args []interface{}) interface{} { return big.NewInt(int64(len(args[0].(List)))) })
+	e.set("length", func(args []interface{}) interface{} { return int64(len(args[0].(List))) })
 	e.set("append", func(args []interface{}) interface{} {
 		res := List{}
 		for _, arg := range args {
@@ -182,7 +186,7 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("nth", func(args []interface{}) interface{} {
-		idx := args[1].(*big.Int).Int64()
+		idx := args[1].(int64)
 		return args[0].(List)[idx]
 	})
 	e.set("reverse", func(args []interface{}) interface{} {
@@ -257,13 +261,13 @@ func standardEnv() *Env {
 		if err != nil {
 			panic(fmt.Sprintf("tcp-send failed: %v", err))
 		}
-		return big.NewInt(int64(n))
+		return int64(n)
 	})
 	e.set("tcp-read", func(args []interface{}) interface{} {
 		conn := args[0].(net.Conn)
 		max := 1024
 		if len(args) > 1 {
-			max = int(args[1].(*big.Int).Int64())
+			max = int(args[1].(int64))
 		}
 		buf := make([]byte, max)
 		n, err := conn.Read(buf)
@@ -285,11 +289,7 @@ func standardEnv() *Env {
 	e.set("concat", func(args []interface{}) interface{} {
 		res := ""
 		for _, arg := range args {
-			if bi, ok := arg.(*big.Int); ok {
-				res += bi.String()
-			} else {
-				res += fmt.Sprintf("%v", arg)
-			}
+			res += fmt.Sprintf("%v", arg)
 		}
 		return res
 	})
@@ -303,14 +303,14 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("string-trim", func(args []interface{}) interface{} { return strings.TrimSpace(args[0].(string)) })
-	e.set("string-length", func(args []interface{}) interface{} { return big.NewInt(int64(len(args[0].(string)))) })
+	e.set("string-length", func(args []interface{}) interface{} { return int64(len(args[0].(string))) })
 	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
 	e.set("string-replace", func(args []interface{}) interface{} {
 		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
 	})
 	e.set("string-at", func(args []interface{}) interface{} {
 		s := args[0].(string)
-		i := args[1].(*big.Int).Int64()
+		i := args[1].(int64)
 		return string(s[i])
 	})
 	e.set("string->list", func(args []interface{}) interface{} {
@@ -335,14 +335,14 @@ func standardEnv() *Env {
 	// Iterables
 	e.set("range", func(args []interface{}) interface{} {
 		start := int64(0)
-		stop := args[0].(*big.Int).Int64()
+		stop := args[0].(int64)
 		if len(args) > 1 {
 			start = stop
-			stop = args[1].(*big.Int).Int64()
+			stop = args[1].(int64)
 		}
 		res := List{}
 		for i := start; i < stop; i++ {
-			res = append(res, big.NewInt(i))
+			res = append(res, i)
 		}
 		return res
 	})
@@ -360,8 +360,8 @@ func standardEnv() *Env {
 		}
 		sort.Slice(l, func(i, j int) bool {
 			switch av := l[i].(type) {
-			case *big.Int:
-				return av.Cmp(l[j].(*big.Int)) < 0
+			case int64:
+				return av < l[j].(int64)
 			case float64:
 				return av < l[j].(float64)
 			case string:
@@ -379,7 +379,7 @@ func standardEnv() *Env {
 		l := args[1].(List)
 		res := make(List, len(l))
 		for i, v := range l {
-			res[i] = fn([]interface{}{v})
+			res[i] = resolve(fn([]interface{}{v}))
 		}
 		return res
 	})
@@ -388,7 +388,7 @@ func standardEnv() *Env {
 		l := args[1].(List)
 		res := List{}
 		for _, v := range l {
-			if test := fn([]interface{}{v}); test.(bool) {
+			if test := resolve(fn([]interface{}{v})); test.(bool) {
 				res = append(res, v)
 			}
 		}
@@ -399,7 +399,7 @@ func standardEnv() *Env {
 		l := args[1].(List)
 		acc := args[2]
 		for _, v := range l {
-			acc = fn([]interface{}{acc, v})
+			acc = resolve(fn([]interface{}{acc, v}))
 		}
 		return acc
 	})
@@ -410,11 +410,7 @@ func standardEnv() *Env {
 			if i > 0 {
 				fmt.Print(" ")
 			}
-			if bi, ok := arg.(*big.Int); ok {
-				fmt.Print(bi.String())
-			} else {
-				fmt.Print(arg)
-			}
+			fmt.Print(arg)
 		}
 		fmt.Println()
 		return nil
@@ -430,8 +426,8 @@ func standardEnv() *Env {
 		return ""
 	})
 	e.set("type", func(args []interface{}) interface{} { return fmt.Sprintf("%T", args[0]) })
-	e.set("bin", func(args []interface{}) interface{} { return "0b" + args[0].(*big.Int).Text(2) })
-	e.set("hex", func(args []interface{}) interface{} { return "0x" + args[0].(*big.Int).Text(16) })
+	e.set("bin", func(args []interface{}) interface{} { return "0b" + strconv.FormatInt(args[0].(int64), 2) })
+	e.set("hex", func(args []interface{}) interface{} { return "0x" + strconv.FormatInt(args[0].(int64), 16) })
 
 	return e
 }

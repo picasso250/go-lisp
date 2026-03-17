@@ -113,4 +113,4 @@
 (define json--parse-obj (lambda (chars)
   (json--parse-obj-extract chars (dict))))
 
-(define json-parse (lambda (s) (car (json--parse-val (string->list s))))))
+(define json-parse (lambda (s) (car (json--parse-val (string->list s)))))

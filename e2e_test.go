@@ -45,6 +45,21 @@ func TestE2E(t *testing.T) {
 			input: "(+ 1.1 2.2)",
 			expected: []string{"3.3000000000000003"},
 		},
+		{
+			name:  "Advanced List Ops",
+			input: "(append '(1 2) '(3 4)) (nth '(10 20 30) 1) (reverse '(1 2 3))",
+			expected: []string{"[1 2 3 4]", "20", "[3 2 1]"},
+		},
+		{
+			name:  "Higher Order Map",
+			input: "(map (lambda (x) (* x 2)) '(1 2 3))",
+			expected: []string{"[2 4 6]"},
+		},
+		{
+			name:  "Advanced String Ops",
+			input: "(string-length \"hello\") (string-contains? \"hello\" \"ell\") (string-replace \"abcabc\" \"a\" \"x\")",
+			expected: []string{"5", "true", "xbcxbc"},
+		},
 	}
 
 	for _, tc := range cases {

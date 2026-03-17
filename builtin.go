@@ -147,6 +147,34 @@ func standardEnv() *Env {
 	e.set("list", func(args []interface{}) interface{} { return List(args) })
 	e.set("null?", func(args []interface{}) interface{} { return len(args[0].(List)) == 0 })
 	e.set("length", func(args []interface{}) interface{} { return big.NewInt(int64(len(args[0].(List)))) })
+	e.set("append", func(args []interface{}) interface{} {
+		res := List{}
+		for _, arg := range args {
+			res = append(res, arg.(List)...)
+		}
+		return res
+	})
+	e.set("nth", func(args []interface{}) interface{} {
+		idx := args[1].(*big.Int).Int64()
+		return args[0].(List)[idx]
+	})
+	e.set("reverse", func(args []interface{}) interface{} {
+		l := args[0].(List)
+		res := make(List, len(l))
+		for i, v := range l {
+			res[len(l)-1-i] = v
+		}
+		return res
+	})
+	e.set("map", func(args []interface{}) interface{} {
+		fn := args[0].(func([]interface{}) interface{})
+		l := args[1].(List)
+		res := make(List, len(l))
+		for i, v := range l {
+			res[i] = fn([]interface{}{v})
+		}
+		return res
+	})
 
 	// String Operations
 	e.set("concat", func(args []interface{}) interface{} {
@@ -170,6 +198,11 @@ func standardEnv() *Env {
 		return res
 	})
 	e.set("string-trim", func(args []interface{}) interface{} { return strings.TrimSpace(args[0].(string)) })
+	e.set("string-length", func(args []interface{}) interface{} { return big.NewInt(int64(len(args[0].(string)))) })
+	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
+	e.set("string-replace", func(args []interface{}) interface{} {
+		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
+	})
 
 	return e
 }

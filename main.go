@@ -183,6 +183,25 @@ func eval(x interface{}, env *Env) interface{} {
 			case "quote":
 				return v[1]
 			case "define":
+				if head, ok := v[1].(List); ok {
+					name := head[0].(Symbol)
+					params := head[1:]
+					var body interface{}
+					if len(v) > 3 {
+						body = append(List{Symbol("begin")}, v[2:]...)
+					} else {
+						body = v[2]
+					}
+					val := func(args []interface{}) interface{} {
+						newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
+						for i, p := range params {
+							newEnv.set(p.(Symbol), args[i])
+						}
+						return eval(body, newEnv)
+					}
+					env.set(name, val)
+					return nil
+				}
 				name := v[1].(Symbol)
 				val := eval(v[2], env)
 				env.set(name, val)

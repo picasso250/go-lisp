@@ -64,26 +64,120 @@ func compareOp(name string, opInt func(int64, int64) bool, opFloat func(float64,
 	}
 }
 
+// standardEnv sets up the initial environment with built-in functions
 func standardEnv() *Env {
 	e := &Env{vars: make(map[Symbol]interface{}), outer: nil}
 
 	// Basic Arithmetic
-	e.set("+", binaryOp("+", func(a, b int64) int64 { return a + b }, func(a, b float64) float64 { return a + b }))
-	e.set("-", binaryOp("-", func(a, b int64) int64 { return a - b }, func(a, b float64) float64 { return a - b }))
-	e.set("*", binaryOp("*", func(a, b int64) int64 { return a * b }, func(a, b float64) float64 { return a * b }))
+	e.set("+", func(args []interface{}) interface{} {
+		if len(args) == 0 {
+			return int64(0)
+		}
+		res := args[0]
+		for _, next := range args[1:] {
+			mustSameType("+", res, next)
+			switch a := res.(type) {
+			case int64:
+				res = a + next.(int64)
+			case float64:
+				res = a + next.(float64)
+			}
+		}
+		return res
+	})
+
+	e.set("*", func(args []interface{}) interface{} {
+		if len(args) == 0 {
+			return int64(1)
+		}
+		res := args[0]
+		for _, next := range args[1:] {
+			mustSameType("*", res, next)
+			switch a := res.(type) {
+			case int64:
+				res = a * next.(int64)
+			case float64:
+				res = a * next.(float64)
+			}
+		}
+		return res
+	})
+
+	e.set("-", func(args []interface{}) interface{} {
+		if len(args) == 0 {
+			panic("- requires at least 1 argument")
+		}
+		if len(args) == 1 {
+			switch v := args[0].(type) {
+			case int64:
+				return -v
+			case float64:
+				return -v
+			default:
+				panic("- requires number")
+			}
+		}
+		res := args[0]
+		for _, next := range args[1:] {
+			mustSameType("-", res, next)
+			switch a := res.(type) {
+			case int64:
+				res = a - next.(int64)
+			case float64:
+				res = a - next.(float64)
+			}
+		}
+		return res
+	})
+
 	e.set("/", binaryOp("/", func(a, b int64) int64 { return a / b }, func(a, b float64) float64 { return a / b }))
 	e.set("%", binaryOp("%", func(a, b int64) int64 { return a % b }, func(a, b float64) float64 { return math.Mod(a, b) }))
 
-	// Comparisons
-	e.set("<", compareOp("<", func(a, b int64) bool { return a < b }, func(a, b float64) bool { return a < b }, func(a, b string) bool { return a < b }))
-	e.set("<=", compareOp("<=", func(a, b int64) bool { return a <= b }, func(a, b float64) bool { return a <= b }, func(a, b string) bool { return a <= b }))
-	e.set(">", compareOp(">", func(a, b int64) bool { return a > b }, func(a, b float64) bool { return a > b }, func(a, b string) bool { return a > b }))
-	e.set(">=", compareOp(">=", func(a, b int64) bool { return a >= b }, func(a, b float64) bool { return a >= b }, func(a, b string) bool { return a >= b }))
+	// Comparisons with Chaining Support
+	makeCompare := func(name string, opInt func(int64, int64) bool, opFloat func(float64, float64) bool, opStr func(string, string) bool) func([]interface{}) interface{} {
+		return func(args []interface{}) interface{} {
+			if len(args) < 2 {
+				panic(fmt.Sprintf("%s requires at least 2 arguments", name))
+			}
+			for i := 0; i < len(args)-1; i++ {
+				a, b := args[i], args[i+1]
+				mustSameType(name, a, b)
+				var ok bool
+				switch av := a.(type) {
+				case int64:
+					ok = opInt(av, b.(int64))
+				case float64:
+					ok = opFloat(av, b.(float64))
+				case string:
+					ok = opStr(av, b.(string))
+				default:
+					panic(fmt.Sprintf("%s: incomparable type", name))
+				}
+				if !ok {
+					return false
+				}
+			}
+			return true
+		}
+	}
+
+	e.set("<", makeCompare("<", func(a, b int64) bool { return a < b }, func(a, b float64) bool { return a < b }, func(a, b string) bool { return a < b }))
+	e.set("<=", makeCompare("<=", func(a, b int64) bool { return a <= b }, func(a, b float64) bool { return a <= b }, func(a, b string) bool { return a <= b }))
+	e.set(">", makeCompare(">", func(a, b int64) bool { return a > b }, func(a, b float64) bool { return a > b }, func(a, b string) bool { return a > b }))
+	e.set(">=", makeCompare(">=", func(a, b int64) bool { return a >= b }, func(a, b float64) bool { return a >= b }, func(a, b string) bool { return a >= b }))
 
 	e.set("=", func(args []interface{}) interface{} {
-		a, b := args[0], args[1]
-		mustSameType("=", a, b)
-		return a == b
+		if len(args) < 2 {
+			panic("= requires at least 2 arguments")
+		}
+		for i := 0; i < len(args)-1; i++ {
+			a, b := args[i], args[i+1]
+			mustSameType("=", a, b)
+			if a != b {
+				return false
+			}
+		}
+		return true
 	})
 	e.set("!=", func(args []interface{}) interface{} {
 		return !e.get("=").(func([]interface{}) interface{})(args).(bool)

@@ -265,10 +265,11 @@ func eval(x interface{}, env *Env) interface{} {
 					if len(v) == 1 {
 						return true
 					}
+					var res interface{} = true
 					for i := 1; i < len(v)-1; i++ {
-						res := eval(v[i], env)
-						if res == false {
-							return false
+						res = eval(v[i], env)
+						if res == false || res == nil {
+							return res
 						}
 					}
 					x = v[len(v)-1]
@@ -277,10 +278,11 @@ func eval(x interface{}, env *Env) interface{} {
 					if len(v) == 1 {
 						return false
 					}
+					var res interface{} = false
 					for i := 1; i < len(v)-1; i++ {
-						res := eval(v[i], env)
-						if res == true {
-							return true
+						res = eval(v[i], env)
+						if res != false && res != nil {
+							return res
 						}
 					}
 					x = v[len(v)-1]

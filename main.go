@@ -12,7 +12,7 @@ type Symbol string
 type List []interface{}
 
 type Env struct {
-	vars   map[Symbol]interface{}
+	vars  map[Symbol]interface{}
 	outer *Env
 }
 
@@ -32,18 +32,37 @@ func (e *Env) set(s Symbol, val interface{}) {
 
 func standardEnv() *Env {
 	e := &Env{vars: make(map[Symbol]interface{}), outer: nil}
+	// Arithmetic
 	e.set("+", func(args []interface{}) interface{} { return args[0].(float64) + args[1].(float64) })
 	e.set("-", func(args []interface{}) interface{} { return args[0].(float64) - args[1].(float64) })
 	e.set("*", func(args []interface{}) interface{} { return args[0].(float64) * args[1].(float64) })
 	e.set("/", func(args []interface{}) interface{} { return args[0].(float64) / args[1].(float64) })
+	
+	// Comparisons
 	e.set("<=", func(args []interface{}) interface{} { return args[0].(float64) <= args[1].(float64) })
+	e.set("<", func(args []interface{}) interface{} { return args[0].(float64) < args[1].(float64) })
+	e.set(">=", func(args []interface{}) interface{} { return args[0].(float64) >= args[1].(float64) })
 	e.set(">", func(args []interface{}) interface{} { return args[0].(float64) > args[1].(float64) })
+	e.set("=", func(args []interface{}) interface{} { return args[0].(float64) == args[1].(float64) })
+	e.set("!=", func(args []interface{}) interface{} { return args[0].(float64) != args[1].(float64) })
+
+	// List Operations
+	e.set("car", func(args []interface{}) interface{} { return args[0].(List)[0] })
+	e.set("cdr", func(args []interface{}) interface{} { return args[0].(List)[1:] })
+	e.set("cons", func(args []interface{}) interface{} {
+		return append(List{args[0]}, args[1].(List)...)
+	})
+	e.set("list", func(args []interface{}) interface{} { return List(args) })
+	e.set("null?", func(args []interface{}) interface{} { return len(args[0].(List)) == 0 })
+	e.set("length", func(args []interface{}) interface{} { return float64(len(args[0].(List))) })
+
 	return e
 }
 
 func tokenize(s string) []string {
 	s = strings.ReplaceAll(s, "(", " ( ")
 	s = strings.ReplaceAll(s, ")", " ) ")
+	s = strings.ReplaceAll(s, "'", " ' ")
 	return strings.Fields(s)
 }
 
@@ -53,6 +72,13 @@ func parse(tokens []string) (interface{}, []string) {
 	}
 	token := tokens[0]
 	rest := tokens[1:]
+
+	if token == "'" {
+		var item interface{}
+		item, rest = parse(rest)
+		return List{Symbol("quote"), item}, rest
+	}
+
 	if token == "(" {
 		var list List
 		for rest[0] != ")" {
@@ -62,6 +88,7 @@ func parse(tokens []string) (interface{}, []string) {
 		}
 		return list, rest[1:]
 	}
+	
 	if f, err := strconv.ParseFloat(token, 64); err == nil {
 		return f, rest
 	}
@@ -81,6 +108,8 @@ func eval(x interface{}, env *Env) interface{} {
 		head := v[0]
 		if s, ok := head.(Symbol); ok {
 			switch s {
+			case "quote":
+				return v[1]
 			case "define":
 				name := v[1].(Symbol)
 				val := eval(v[2], env)
@@ -91,7 +120,28 @@ func eval(x interface{}, env *Env) interface{} {
 				if test {
 					return eval(v[2], env)
 				}
-				return eval(v[3], env)
+				if len(v) > 3 {
+					return eval(v[3], env)
+				}
+				return nil
+			case "begin":
+				var result interface{}
+				for _, exp := range v[1:] {
+					result = eval(exp, env)
+				}
+				return result
+			case "let":
+				// (let ((v1 e1) (v2 e2)) body)
+				bindings := v[1].(List)
+				body := v[2]
+				newEnv := &Env{vars: make(map[Symbol]interface{}), outer: env}
+				for _, b := range bindings {
+					bind := b.(List)
+					name := bind[0].(Symbol)
+					val := eval(bind[1], env)
+					newEnv.set(name, val)
+				}
+				return eval(body, newEnv)
 			case "lambda":
 				params := v[1].(List)
 				body := v[2]

@@ -1,5 +1,7 @@
 # go-lisp
 
+[![Go Test](https://github.com/picasso250/go-lisp/actions/workflows/go.yml/badge.svg)](https://github.com/picasso250/go-lisp/actions/workflows/go.yml)
+
 一个使用 Go 语言实现的健壮、模块化且可扩展的 Lisp/Scheme 解释器。具有任意精度算术运算、受 Python 启发的内置函数库，以及 TCP 网络和 JSON 处理等高级功能。
 
 ## 特性

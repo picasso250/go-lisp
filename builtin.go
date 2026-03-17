@@ -162,6 +162,10 @@ func standardEnv() *Env {
 	e.set("integer?", func(args []interface{}) interface{} { _, ok := args[0].(*big.Int); return ok })
 	e.set("float?", func(args []interface{}) interface{} { _, ok := args[0].(float64); return ok })
 	e.set("string?", func(args []interface{}) interface{} { _, ok := args[0].(string); return ok })
+	e.set("list?", func(args []interface{}) interface{} { _, ok := args[0].(List); return ok })
+	e.set("dict?", func(args []interface{}) interface{} { _, ok := args[0].(Dict); return ok })
+	e.set("nil?", func(args []interface{}) interface{} { return args[0] == nil })
+	e.set("bool?", func(args []interface{}) interface{} { _, ok := args[0].(bool); return ok })
 
 	// List Ops
 	e.set("car", func(args []interface{}) interface{} { return args[0].(List)[0] })
@@ -303,6 +307,19 @@ func standardEnv() *Env {
 	e.set("string-contains?", func(args []interface{}) interface{} { return strings.Contains(args[0].(string), args[1].(string)) })
 	e.set("string-replace", func(args []interface{}) interface{} {
 		return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
+	})
+	e.set("string-at", func(args []interface{}) interface{} {
+		s := args[0].(string)
+		i := args[1].(*big.Int).Int64()
+		return string(s[i])
+	})
+	e.set("string->list", func(args []interface{}) interface{} {
+		s := args[0].(string)
+		res := make(List, len(s))
+		for i, r := range s {
+			res[i] = string(r)
+		}
+		return res
 	})
 
 	// Files

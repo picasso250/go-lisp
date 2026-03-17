@@ -59,6 +59,8 @@ go test -v .
 ```bash
 go test -coverprofile=coverage.out .
 go tool cover -func=coverage.out
+# Generate human-readable report:
+python parse_coverage.py
 # View visual report:
 # go tool cover -html=coverage.out
 ```

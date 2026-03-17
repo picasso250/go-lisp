@@ -196,17 +196,24 @@ func standardEnv() *Env {
 	})
 	e.set("sorted", func(args []interface{}) interface{} {
 		l := append(List{}, args[0].(List)...)
+		if len(l) <= 1 {
+			return l
+		}
+		// Check for mixed types
+		firstType := fmt.Sprintf("%T", l[0])
+		for _, item := range l[1:] {
+			if fmt.Sprintf("%T", item) != firstType {
+				panic("sorted: mixed types")
+			}
+		}
 		sort.Slice(l, func(i, j int) bool {
 			switch av := l[i].(type) {
 			case *big.Int:
-				bv, ok := l[j].(*big.Int)
-				return ok && av.Cmp(bv) < 0
+				return av.Cmp(l[j].(*big.Int)) < 0
 			case float64:
-				bv, ok := l[j].(float64)
-				return ok && av < bv
+				return av < l[j].(float64)
 			case string:
-				bv, ok := l[j].(string)
-				return ok && av < bv
+				return av < l[j].(string)
 			default:
 				return false
 			}

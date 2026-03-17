@@ -1,0 +1,2 @@
+- run `go build .` first
+- 检测测试cover率 `go test "-coverprofile=coverage.out" .`，然后使用 `parse_coverage.py`

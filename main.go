@@ -37,6 +37,17 @@ func (e *Env) set(s Symbol, val interface{}) {
 	e.vars[s] = val
 }
 
+func (e *Env) update(s Symbol, val interface{}) bool {
+	if _, ok := e.vars[s]; ok {
+		e.vars[s] = val
+		return true
+	}
+	if e.outer != nil {
+		return e.outer.update(s, val)
+	}
+	return false
+}
+
 // tokenize supports strings like "hello world" and escapes
 func tokenize(s string) []string {
 	var tokens []string
@@ -193,6 +204,13 @@ func eval(x interface{}, env *Env) interface{} {
 		head := v[0]
 		if s, ok := head.(Symbol); ok {
 			switch s {
+			case "set!":
+				name := v[1].(Symbol)
+				val := eval(v[2], env)
+				if !env.update(name, val) {
+					panic(fmt.Sprintf("set!: undefined variable %s", name))
+				}
+				return nil
 			case "quote":
 				return v[1]
 			case "define":

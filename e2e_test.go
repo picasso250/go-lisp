@@ -49,7 +49,7 @@ func TestE2E(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := exec.Command("go", "run", "main.go")
+			cmd := exec.Command("go", "run", ".")
 			cmd.Stdin = strings.NewReader(tc.input + "\n")
 			var out bytes.Buffer
 			cmd.Stdout = &out

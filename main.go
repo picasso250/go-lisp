@@ -15,6 +15,8 @@ import (
 type Symbol string
 type List []interface{}
 type Dict map[string]interface{}
+type TCPListener interface{}
+type TCPConn interface{}
 
 type Env struct {
 	vars  map[Symbol]interface{}

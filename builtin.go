@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"sort"
 	"strconv"
@@ -186,6 +188,61 @@ func standardEnv() *Env {
 		d, key := args[0].(Dict), args[1].(string)
 		_, ok := d[key]
 		return ok
+	})
+
+	// TCP Ops
+	e.set("tcp-listen", func(args []interface{}) interface{} {
+		addr := args[0].(string)
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			panic(fmt.Sprintf("tcp-listen failed: %v", err))
+		}
+		return l
+	})
+	e.set("tcp-accept", func(args []interface{}) interface{} {
+		l := args[0].(net.Listener)
+		conn, err := l.Accept()
+		if err != nil {
+			panic(fmt.Sprintf("tcp-accept failed: %v", err))
+		}
+		return conn
+	})
+	e.set("tcp-connect", func(args []interface{}) interface{} {
+		addr := args[0].(string)
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			panic(fmt.Sprintf("tcp-connect failed: %v", err))
+		}
+		return conn
+	})
+	e.set("tcp-send", func(args []interface{}) interface{} {
+		conn, data := args[0].(net.Conn), args[1].(string)
+		n, err := conn.Write([]byte(data))
+		if err != nil {
+			panic(fmt.Sprintf("tcp-send failed: %v", err))
+		}
+		return big.NewInt(int64(n))
+	})
+	e.set("tcp-read", func(args []interface{}) interface{} {
+		conn := args[0].(net.Conn)
+		max := 1024
+		if len(args) > 1 {
+			max = int(args[1].(*big.Int).Int64())
+		}
+		buf := make([]byte, max)
+		n, err := conn.Read(buf)
+		if err != nil && err != io.EOF {
+			panic(fmt.Sprintf("tcp-read failed: %v", err))
+		}
+		return string(buf[:n])
+	})
+	e.set("tcp-close", func(args []interface{}) interface{} {
+		if l, ok := args[0].(net.Listener); ok {
+			l.Close()
+		} else if c, ok := args[0].(net.Conn); ok {
+			c.Close()
+		}
+		return nil
 	})
 
 	// String Ops

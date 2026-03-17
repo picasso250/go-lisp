@@ -8,8 +8,21 @@
 
 ### 核心语言
 - **变量定义**: `(define x 10)`
+- **变量修改**: `(set! x 20)`
 - **匿名函数 (Lambdas)**: `(define fact (lambda (n) ...))`
+- **函数简写**: `(define (add x y) (+ x y))`
 - **条件判断**: `(if (> x 5) "high" "low")`
+
+### 语法糖
+- **Def/End 块** (自动转换为 `define`，支持多行 `begin` 逻辑):
+  ```lisp
+  def (fib n)
+    if (< n 2)
+       n
+       (+ (fib (- n 1)) (fib (- n 2)))
+  end
+  ```
+- **变量简写**: `def x 100 end`
 - **局部绑定**: `(let ((a 1) (b 2)) (+ a b))`
 - **顺序执行**: `(begin (step1) (step2) (result))`
 - **引用 (Quoting)**: `'sym` 或 `(quote (1 2 3))`

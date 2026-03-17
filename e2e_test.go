@@ -11,7 +11,17 @@ import (
 )
 
 func TestE2E(t *testing.T) {
-	files, err := os.ReadDir("tests")
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current working directory: %v", err)
+	}
+	testsDir, err := filepath.Abs("tests")
+	if err != nil {
+		t.Fatalf("Failed to get absolute path for tests: %v", err)
+	}
+	stdlibPath := filepath.Join(wd, "stdlib.lisp")
+
+	files, err := os.ReadDir(testsDir)
 	if err != nil {
 		t.Fatalf("Failed to read tests directory: %v", err)
 	}
@@ -22,11 +32,18 @@ func TestE2E(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-			path := filepath.Join("tests", file.Name())
+			path := filepath.Join(testsDir, file.Name())
 			content, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("Failed to read test file %s: %v", path, err)
 			}
+
+			// Create temporary directory for each test
+			tmpDir := t.TempDir()
+			if err := os.Chdir(tmpDir); err != nil {
+				t.Fatalf("Failed to change to temporary directory: %v", err)
+			}
+			defer os.Chdir(wd)
 
 			lines := strings.Split(strings.TrimSpace(string(content)), "\n")
 			if len(lines) == 0 {
@@ -58,7 +75,7 @@ func TestE2E(t *testing.T) {
 			input := strings.Join(lines[:len(lines)-1], "\n")
 
 			env := standardEnv()
-			if stdlib, err := os.ReadFile("stdlib.lisp"); err == nil {
+			if stdlib, err := os.ReadFile(stdlibPath); err == nil {
 				evalString(io.Discard, string(stdlib), env, true)
 			}
 

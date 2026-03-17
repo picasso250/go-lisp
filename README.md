@@ -2,7 +2,7 @@
 
 [![Go Test](https://github.com/picasso250/go-lisp/actions/workflows/go.yml/badge.svg)](https://github.com/picasso250/go-lisp/actions/workflows/go.yml)
 
-一个使用 Go 语言实现的健壮、模块化且可扩展的 Lisp/Scheme 解释器。具有任意精度算术运算、受 Python 启发的内置函数库，以及 TCP 网络和 JSON 处理等高级功能。
+一个使用 Go 语言实现的健壮、模块化且可扩展的 Lisp/Scheme 解释器。具有 64 位算术运算、受 Python 启发的内置函数库，以及 TCP 网络和 JSON 处理等高级功能。
 
 ## 特性
 
@@ -31,7 +31,7 @@
 
 ### 数据类型
 - **强类型检查**: 算术和比较运算符（`+`, `-`, `>`, `=` 等）要求操作数类型一致。
-- **整数**: 任意精度的“大数”（通过 `math/big` 实现）。
+- **整数**: 64位有符号整数 (`int64`)。
 - **浮点数**: 64位浮点数。
 - **字符串**: 支持转义字符（`\n`, `\r`, `\t`, `\"`, `\\`）。
 - **布尔值**: `true` 和 `false`。

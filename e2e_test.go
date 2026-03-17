@@ -44,6 +44,17 @@ func TestE2E(t *testing.T) {
 				t.Fatalf("Failed to parse expected output in %s: %v", path, err)
 			}
 
+			// 现在设置 defer，因为它能访问已经解析出的 expected
+			defer func() {
+				if r := recover(); r != nil {
+					if len(expected) > 0 && expected[0] == "PANIC" {
+						// 预期的 panic
+						return
+					}
+					t.Fatalf("Test %s panicked unexpectedly: %v", path, r)
+				}
+			}()
+
 			input := strings.Join(lines[:len(lines)-1], "\n")
 
 			env := standardEnv()
@@ -51,13 +62,11 @@ func TestE2E(t *testing.T) {
 				evalString(io.Discard, string(stdlib), env, true)
 			}
 
-			// 捕获 Stdout
 			old := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
 			var buffer bytes.Buffer
-			// evalString 写入 buffer，而内置 print 写入 os.Stdout (此时是 w)
 			evalString(&buffer, input, env, false)
 
 			w.Close()
@@ -66,7 +75,6 @@ func TestE2E(t *testing.T) {
 			var stdoutBuffer bytes.Buffer
 			io.Copy(&stdoutBuffer, r)
 
-			// 合并来自 evalString 的输出和来自内置 print 的输出
 			combinedOutput := buffer.String() + stdoutBuffer.String()
 
 			actualLines := strings.Split(strings.TrimSpace(combinedOutput), "\n")
@@ -75,6 +83,12 @@ func TestE2E(t *testing.T) {
 				if strings.TrimSpace(l) != "" {
 					filteredActual = append(filteredActual, strings.TrimSpace(l))
 				}
+			}
+
+			// 如果标记为 PANIC 且没有 panic 发生，也是一种失败
+			if len(expected) > 0 && expected[0] == "PANIC" {
+				t.Errorf("%s: Expected panic but it didn't happen", path)
+				return
 			}
 
 			if len(filteredActual) != len(expected) {

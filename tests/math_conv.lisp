@@ -1,2 +1,2 @@
-(abs -50) (pow 2 10) (str 123) (int "456") (integer 789) (bool 0) (bool 1) (bool '()) (bool "") (bool false) (bool true) (bool 0.0) (bool 1.5) (divmod 10 3) (round 3.6) (round 3.4) (int 1.5) (float 100) (float "10.5") (str 1.5) (str "hello")
-; EXPECT ["50", "1024", "123", "456", "789", "false", "true", "false", "false", "false", "true", "false", "true", "[3 1]", "4", "3", "1", "100", "10.5", "1.5", "hello"]
+(abs -50) (abs -1.5) (pow 2 10) (pow 2.0 3.0) (str 123) (int "456") (integer 789) (bool 0) (bool 1) (bool '()) (bool "") (bool false) (bool true) (bool 0.0) (bool 1.5) (divmod 10 3) (round 3.6) (round 3.4) (int 1.5) (float 100) (float "10.5") (str 1.5) (str "hello")
+; EXPECT ["50", "1.5", "1024", "8", "123", "456", "789", "false", "true", "false", "false", "false", "true", "false", "true", "[3 1]", "4", "3", "1", "100", "10.5", "1.5", "hello"]

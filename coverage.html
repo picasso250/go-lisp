@@ -1,0 +1,641 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>go-lisp: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">go-lisp/builtin.go (92.3%)</option>
+				
+				<option value="file1">go-lisp/main.go (85.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "math"
+        "math/big"
+        "os"
+        "sort"
+        "strconv"
+        "strings"
+)
+
+func binaryOp(name string, opInt func(*big.Int, *big.Int) *big.Int, opFloat func(float64, float64) float64) func([]interface{}) interface{} <span class="cov8" title="1">{
+        return func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        if !ok </span><span class="cov0" title="0">{
+                                panic(fmt.Sprintf("%s: type mismatch, expected integers", name))</span>
+                        }
+                        <span class="cov8" title="1">return opInt(av, bv)</span>
+                case float64:<span class="cov8" title="1">
+                        bv, ok := b.(float64)
+                        if !ok </span><span class="cov0" title="0">{
+                                panic(fmt.Sprintf("%s: type mismatch, expected floats", name))</span>
+                        }
+                        <span class="cov8" title="1">return opFloat(av, bv)</span>
+                default:<span class="cov0" title="0">
+                        panic(fmt.Sprintf("%s: invalid types", name))</span>
+                }
+        }
+}
+
+func standardEnv() *Env <span class="cov8" title="1">{
+        e := &amp;Env{vars: make(map[Symbol]interface{}), outer: nil}
+
+        // Basic Arithmetic
+        e.set("+", binaryOp("+", func(a, b *big.Int) *big.Int </span><span class="cov8" title="1">{ return new(big.Int).Add(a, b) }</span>, func(a, b float64) float64 <span class="cov8" title="1">{ return a + b }</span>))
+        <span class="cov8" title="1">e.set("-", binaryOp("-", func(a, b *big.Int) *big.Int </span><span class="cov8" title="1">{ return new(big.Int).Sub(a, b) }</span>, func(a, b float64) float64 <span class="cov8" title="1">{ return a - b }</span>))
+        <span class="cov8" title="1">e.set("*", binaryOp("*", func(a, b *big.Int) *big.Int </span><span class="cov8" title="1">{ return new(big.Int).Mul(a, b) }</span>, func(a, b float64) float64 <span class="cov8" title="1">{ return a * b }</span>))
+        <span class="cov8" title="1">e.set("/", binaryOp("/", func(a, b *big.Int) *big.Int </span><span class="cov8" title="1">{ return new(big.Int).Div(a, b) }</span>, func(a, b float64) float64 <span class="cov8" title="1">{ return a / b }</span>))
+        <span class="cov8" title="1">e.set("%", binaryOp("%", func(a, b *big.Int) *big.Int </span><span class="cov8" title="1">{ return new(big.Int).Mod(a, b) }</span>, func(a, b float64) float64 <span class="cov8" title="1">{ return math.Mod(a, b) }</span>))
+
+        // Comparisons
+        <span class="cov8" title="1">e.set("&lt;", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &lt; 0</span>
+                case float64:<span class="cov0" title="0"> return av &lt; b.(float64)</span>
+                case string:<span class="cov8" title="1"> return av &lt; b.(string)</span>
+                default:<span class="cov0" title="0"> return false</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("&lt;=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &lt;= 0</span>
+                case float64:<span class="cov0" title="0"> return av &lt;= b.(float64)</span>
+                case string:<span class="cov8" title="1"> return av &lt;= b.(string)</span>
+                default:<span class="cov0" title="0"> return false</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("&gt;", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &gt; 0</span>
+                case float64:<span class="cov0" title="0"> return av &gt; b.(float64)</span>
+                case string:<span class="cov8" title="1"> return av &gt; b.(string)</span>
+                default:<span class="cov0" title="0"> return false</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("&gt;=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> return av.Cmp(b.(*big.Int)) &gt;= 0</span>
+                case float64:<span class="cov0" title="0"> return av &gt;= b.(float64)</span>
+                case string:<span class="cov8" title="1"> return av &gt;= b.(string)</span>
+                default:<span class="cov0" title="0"> return false</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                switch av := a.(type) </span>{
+                case *big.Int:<span class="cov8" title="1">
+                        bv, ok := b.(*big.Int)
+                        return ok &amp;&amp; av.Cmp(bv) == 0</span>
+                default:<span class="cov8" title="1"> return a == b</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("!=", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                return !e.get("=").(func([]interface{}) interface{})(args).(bool)
+        }</span>)
+
+        // Python-like Math
+        <span class="cov8" title="1">e.set("abs", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                switch v := args[0].(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> return new(big.Int).Abs(v)</span>
+                case float64:<span class="cov0" title="0"> return math.Abs(v)</span>
+                default:<span class="cov0" title="0"> panic("abs requires number")</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("pow", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0], args[1]
+                if ai, ok := a.(*big.Int); ok </span><span class="cov8" title="1">{ return new(big.Int).Exp(ai, b.(*big.Int), nil) }</span>
+                <span class="cov0" title="0">return math.Pow(a.(float64), b.(float64))</span>
+        })
+        <span class="cov8" title="1">e.set("divmod", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                a, b := args[0].(*big.Int), args[1].(*big.Int)
+                q, r := new(big.Int).DivMod(a, b, new(big.Int))
+                return List{q, r}
+        }</span>)
+        <span class="cov8" title="1">e.set("round", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return math.Round(args[0].(float64)) }</span>)
+
+        // Conversions &amp; Predicates
+        <span class="cov8" title="1">e.set("int", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                switch v := args[0].(type) </span>{
+                case float64:<span class="cov8" title="1"> return big.NewInt(int64(v))</span>
+                case string:<span class="cov8" title="1"> bi := new(big.Int); bi.SetString(v, 10); return bi</span>
+                default:<span class="cov8" title="1"> return v.(*big.Int)</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("integer", e.get("int")) // alias
+        e.set("float", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                switch v := args[0].(type) </span>{
+                case *big.Int:<span class="cov8" title="1"> f, _ := new(big.Float).SetInt(v).Float64(); return f</span>
+                case string:<span class="cov8" title="1"> f, _ := strconv.ParseFloat(v, 64); return f</span>
+                default:<span class="cov0" title="0"> return v.(float64)</span>
+                }
+        })
+        <span class="cov8" title="1">e.set("str", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                if bi, ok := args[0].(*big.Int); ok </span><span class="cov8" title="1">{ return bi.String() }</span>
+                <span class="cov8" title="1">return fmt.Sprintf("%v", args[0])</span>
+        })
+        <span class="cov8" title="1">e.set("bool", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                if args[0] == nil || args[0] == false </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">if bi, ok := args[0].(*big.Int); ok &amp;&amp; bi.Sign() == 0 </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">if f, ok := args[0].(float64); ok &amp;&amp; f == 0 </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">if s, ok := args[0].(string); ok &amp;&amp; s == "" </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">if l, ok := args[0].(List); ok &amp;&amp; len(l) == 0 </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">return true</span>
+        })
+        <span class="cov8" title="1">e.set("integer?", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ _, ok := args[0].(*big.Int); return ok }</span>)
+        <span class="cov8" title="1">e.set("float?", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ _, ok := args[0].(float64); return ok }</span>)
+        <span class="cov8" title="1">e.set("string?", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ _, ok := args[0].(string); return ok }</span>)
+
+        // List Ops
+        <span class="cov8" title="1">e.set("car", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return args[0].(List)[0] }</span>)
+        <span class="cov8" title="1">e.set("cdr", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return args[0].(List)[1:] }</span>)
+        <span class="cov8" title="1">e.set("cons", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return append(List{args[0]}, args[1].(List)...) }</span>)
+        <span class="cov8" title="1">e.set("list", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return List(args) }</span>)
+        <span class="cov8" title="1">e.set("null?", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return len(args[0].(List)) == 0 }</span>)
+        <span class="cov8" title="1">e.set("length", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return big.NewInt(int64(len(args[0].(List)))) }</span>)
+        <span class="cov8" title="1">e.set("append", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                res := List{}
+                for _, arg := range args </span><span class="cov8" title="1">{ res = append(res, arg.(List)...) }</span>
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("nth", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                idx := args[1].(*big.Int).Int64()
+                return args[0].(List)[idx]
+        }</span>)
+        <span class="cov8" title="1">e.set("reverse", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                l := args[0].(List)
+                res := make(List, len(l))
+                for i, v := range l </span><span class="cov8" title="1">{ res[len(l)-1-i] = v }</span>
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("reversed", e.get("reverse"))
+
+        // String Ops
+        e.set("concat", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                res := ""
+                for _, arg := range args </span><span class="cov8" title="1">{
+                        if bi, ok := arg.(*big.Int); ok </span><span class="cov8" title="1">{ res += bi.String() }</span> else<span class="cov8" title="1"> { res += fmt.Sprintf("%v", arg) }</span>
+                }
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("string-split", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                s, sep := args[0].(string), args[1].(string)
+                parts := strings.Split(s, sep)
+                res := make(List, len(parts))
+                for i, p := range parts </span><span class="cov8" title="1">{ res[i] = p }</span>
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("string-trim", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return strings.TrimSpace(args[0].(string)) }</span>)
+        <span class="cov8" title="1">e.set("string-length", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return big.NewInt(int64(len(args[0].(string)))) }</span>)
+        <span class="cov8" title="1">e.set("string-contains?", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return strings.Contains(args[0].(string), args[1].(string)) }</span>)
+        <span class="cov8" title="1">e.set("string-replace", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                return strings.ReplaceAll(args[0].(string), args[1].(string), args[2].(string))
+        }</span>)
+
+        // Files
+        <span class="cov8" title="1">e.set("read-file", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                content, _ := os.ReadFile(args[0].(string)); return string(content)
+        }</span>)
+        <span class="cov8" title="1">e.set("write-file", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644); return true
+        }</span>)
+
+        // Iterables
+        <span class="cov8" title="1">e.set("range", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                start := int64(0); stop := args[0].(*big.Int).Int64()
+                if len(args) &gt; 1 </span><span class="cov0" title="0">{ start = stop; stop = args[1].(*big.Int).Int64() }</span>
+                <span class="cov8" title="1">res := List{}
+                for i := start; i &lt; stop; i++ </span><span class="cov8" title="1">{ res = append(res, big.NewInt(i)) }</span>
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("sorted", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                l := append(List{}, args[0].(List)...)
+                sort.Slice(l, func(i, j int) bool </span><span class="cov8" title="1">{
+                        switch av := l[i].(type) </span>{
+                        case *big.Int:<span class="cov8" title="1">
+                                bv, ok := l[j].(*big.Int)
+                                return ok &amp;&amp; av.Cmp(bv) &lt; 0</span>
+                        case float64:<span class="cov8" title="1">
+                                bv, ok := l[j].(float64)
+                                return ok &amp;&amp; av &lt; bv</span>
+                        case string:<span class="cov8" title="1">
+                                bv, ok := l[j].(string)
+                                return ok &amp;&amp; av &lt; bv</span>
+                        default:<span class="cov0" title="0">
+                                return false</span>
+                        }
+                })
+                <span class="cov8" title="1">return l</span>
+        })
+
+        // Higher Order
+        <span class="cov8" title="1">e.set("map", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                fn := args[0].(func([]interface{}) interface{})
+                l := args[1].(List)
+                res := make(List, len(l))
+                for i, v := range l </span><span class="cov8" title="1">{ res[i] = fn([]interface{}{v}) }</span>
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("filter", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                fn := args[0].(func([]interface{}) interface{})
+                l := args[1].(List)
+                res := List{}
+                for _, v := range l </span><span class="cov8" title="1">{ if test := fn([]interface{}{v}); test.(bool) </span><span class="cov8" title="1">{ res = append(res, v) }</span> }
+                <span class="cov8" title="1">return res</span>
+        })
+        <span class="cov8" title="1">e.set("reduce", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                fn := args[0].(func([]interface{}) interface{})
+                l := args[1].(List)
+                acc := args[2]
+                for _, v := range l </span><span class="cov8" title="1">{ acc = fn([]interface{}{acc, v}) }</span>
+                <span class="cov8" title="1">return acc</span>
+        })
+
+        // System &amp; Debug
+        <span class="cov8" title="1">e.set("print", func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                for i, arg := range args </span><span class="cov8" title="1">{
+                        if i &gt; 0 </span><span class="cov8" title="1">{ fmt.Print(" ") }</span>
+                        <span class="cov8" title="1">if bi, ok := arg.(*big.Int); ok </span><span class="cov8" title="1">{ fmt.Print(bi.String()) }</span> else<span class="cov8" title="1"> { fmt.Print(arg) }</span>
+                }
+                <span class="cov8" title="1">fmt.Println(); return nil</span>
+        })
+        <span class="cov8" title="1">e.set("type", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return fmt.Sprintf("%T", args[0]) }</span>)
+        <span class="cov8" title="1">e.set("bin", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return "0b" + args[0].(*big.Int).Text(2) }</span>)
+        <span class="cov8" title="1">e.set("hex", func(args []interface{}) interface{} </span><span class="cov8" title="1">{ return "0x" + args[0].(*big.Int).Text(16) }</span>)
+
+        <span class="cov8" title="1">return e</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "bufio"
+        "fmt"
+        "io"
+        "math/big"
+        "os"
+        "strconv"
+        "strings"
+        "unicode"
+)
+
+type Symbol string
+type List []interface{}
+
+type Env struct {
+        vars  map[Symbol]interface{}
+        outer *Env
+}
+
+func (e *Env) get(s Symbol) interface{} <span class="cov8" title="1">{
+        if val, ok := e.vars[s]; ok </span><span class="cov8" title="1">{
+                return val
+        }</span>
+        <span class="cov8" title="1">if e.outer != nil </span><span class="cov8" title="1">{
+                return e.outer.get(s)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (e *Env) set(s Symbol, val interface{}) <span class="cov8" title="1">{
+        e.vars[s] = val
+}</span>
+
+// tokenize supports strings like "hello world" and escapes
+func tokenize(s string) []string <span class="cov8" title="1">{
+        var tokens []string
+        var builder strings.Builder
+        inString := false
+        escaped := false
+
+        runes := []rune(s)
+        for i := 0; i &lt; len(runes); i++ </span><span class="cov8" title="1">{
+                r := runes[i]
+
+                if inString </span><span class="cov8" title="1">{
+                        if escaped </span><span class="cov8" title="1">{
+                                switch r </span>{
+                                case 'n':<span class="cov8" title="1">
+                                        builder.WriteRune('\n')</span>
+                                case 't':<span class="cov0" title="0">
+                                        builder.WriteRune('\t')</span>
+                                case '\\':<span class="cov0" title="0">
+                                        builder.WriteRune('\\')</span>
+                                case '"':<span class="cov8" title="1">
+                                        builder.WriteRune('"')</span>
+                                default:<span class="cov0" title="0">
+                                        builder.WriteRune('\\')
+                                        builder.WriteRune(r)</span>
+                                }
+                                <span class="cov8" title="1">escaped = false</span>
+                        } else<span class="cov8" title="1"> if r == '\\' </span><span class="cov8" title="1">{
+                                escaped = true
+                        }</span> else<span class="cov8" title="1"> if r == '"' </span><span class="cov8" title="1">{
+                                inString = false
+                                tokens = append(tokens, "\""+builder.String()+"\"")
+                                builder.Reset()
+                        }</span> else<span class="cov8" title="1"> {
+                                builder.WriteRune(r)
+                        }</span>
+                        <span class="cov8" title="1">continue</span>
+                }
+
+                <span class="cov8" title="1">if r == '"' </span><span class="cov8" title="1">{
+                        inString = true
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">if unicode.IsSpace(r) </span><span class="cov8" title="1">{
+                        if builder.Len() &gt; 0 </span><span class="cov8" title="1">{
+                                tokens = append(tokens, builder.String())
+                                builder.Reset()
+                        }</span>
+                } else<span class="cov8" title="1"> if r == '(' || r == ')' || r == '\'' </span><span class="cov8" title="1">{
+                        if builder.Len() &gt; 0 </span><span class="cov8" title="1">{
+                                tokens = append(tokens, builder.String())
+                                builder.Reset()
+                        }</span>
+                        <span class="cov8" title="1">tokens = append(tokens, string(r))</span>
+                } else<span class="cov8" title="1"> {
+                        builder.WriteRune(r)
+                }</span>
+        }
+        <span class="cov8" title="1">if builder.Len() &gt; 0 </span><span class="cov0" title="0">{
+                tokens = append(tokens, builder.String())
+        }</span>
+        <span class="cov8" title="1">return tokens</span>
+}
+
+func parse(tokens []string) (interface{}, []string) <span class="cov8" title="1">{
+        if len(tokens) == 0 </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span>
+        <span class="cov8" title="1">token := tokens[0]
+        rest := tokens[1:]
+
+        if token == "'" </span><span class="cov8" title="1">{
+                var item interface{}
+                item, rest = parse(rest)
+                return List{Symbol("quote"), item}, rest
+        }</span>
+        <span class="cov8" title="1">if token == "(" </span><span class="cov8" title="1">{
+                var list List
+                for rest[0] != ")" </span><span class="cov8" title="1">{
+                        var item interface{}
+                        item, rest = parse(rest)
+                        list = append(list, item)
+                }</span>
+                <span class="cov8" title="1">return list, rest[1:]</span>
+        }
+
+        <span class="cov8" title="1">if strings.HasPrefix(token, "\"") &amp;&amp; strings.HasSuffix(token, "\"") </span><span class="cov8" title="1">{
+                return token[1 : len(token)-1], rest
+        }</span>
+
+        // Big Integer or Float
+        <span class="cov8" title="1">if strings.ContainsAny(token, ".eE") </span><span class="cov8" title="1">{
+                if f, err := strconv.ParseFloat(token, 64); err == nil </span><span class="cov8" title="1">{
+                        return f, rest
+                }</span>
+        } else<span class="cov8" title="1"> {
+                bi := new(big.Int)
+                if _, ok := bi.SetString(token, 10); ok </span><span class="cov8" title="1">{
+                        return bi, rest
+                }</span>
+        }
+
+        <span class="cov8" title="1">return Symbol(token), rest</span>
+}
+
+func eval(x interface{}, env *Env) interface{} <span class="cov8" title="1">{
+        switch v := x.(type) </span>{
+        case string, float64, *big.Int, bool:<span class="cov8" title="1">
+                return v</span>
+        case Symbol:<span class="cov8" title="1">
+                if v == "true" </span><span class="cov8" title="1">{ return true }</span>
+                <span class="cov8" title="1">if v == "false" </span><span class="cov8" title="1">{ return false }</span>
+                <span class="cov8" title="1">return env.get(v)</span>
+        case List:<span class="cov8" title="1">
+                if len(v) == 0 </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+                <span class="cov8" title="1">head := v[0]
+                if s, ok := head.(Symbol); ok </span><span class="cov8" title="1">{
+                        switch s </span>{
+                        case "quote":<span class="cov8" title="1">
+                                return v[1]</span>
+                        case "define":<span class="cov8" title="1">
+                                name := v[1].(Symbol)
+                                val := eval(v[2], env)
+                                env.set(name, val)
+                                return nil</span>
+                        case "if":<span class="cov8" title="1">
+                                test := eval(v[1], env)
+                                if test == true </span><span class="cov8" title="1">{
+                                        return eval(v[2], env)
+                                }</span>
+                                <span class="cov8" title="1">if len(v) &gt; 3 </span><span class="cov8" title="1">{
+                                        return eval(v[3], env)
+                                }</span>
+                                <span class="cov0" title="0">return nil</span>
+                        case "begin":<span class="cov8" title="1">
+                                var result interface{}
+                                for _, exp := range v[1:] </span><span class="cov8" title="1">{
+                                        result = eval(exp, env)
+                                }</span>
+                                <span class="cov8" title="1">return result</span>
+                        case "and":<span class="cov8" title="1">
+                                for _, exp := range v[1:] </span><span class="cov8" title="1">{
+                                        res := eval(exp, env)
+                                        if res == false </span><span class="cov8" title="1">{
+                                                return false
+                                        }</span>
+                                }
+                                <span class="cov8" title="1">return true</span>
+                        case "or":<span class="cov8" title="1">
+                                for _, exp := range v[1:] </span><span class="cov8" title="1">{
+                                        res := eval(exp, env)
+                                        if res == true </span><span class="cov8" title="1">{
+                                                return true
+                                        }</span>
+                                }
+                                <span class="cov8" title="1">return false</span>
+                        case "let":<span class="cov8" title="1">
+                                bindings := v[1].(List)
+                                body := v[2]
+                                newEnv := &amp;Env{vars: make(map[Symbol]interface{}), outer: env}
+                                for _, b := range bindings </span><span class="cov8" title="1">{
+                                        bind := b.(List)
+                                        name := bind[0].(Symbol)
+                                        val := eval(bind[1], env)
+                                        newEnv.set(name, val)
+                                }</span>
+                                <span class="cov8" title="1">return eval(body, newEnv)</span>
+                        case "lambda":<span class="cov8" title="1">
+                                params := v[1].(List)
+                                body := v[2]
+                                return func(args []interface{}) interface{} </span><span class="cov8" title="1">{
+                                        newEnv := &amp;Env{vars: make(map[Symbol]interface{}), outer: env}
+                                        for i, p := range params </span><span class="cov8" title="1">{
+                                                newEnv.set(p.(Symbol), args[i])
+                                        }</span>
+                                        <span class="cov8" title="1">return eval(body, newEnv)</span>
+                                }
+                        }
+                }
+                <span class="cov8" title="1">procRaw := eval(head, env)
+                if procRaw == nil </span><span class="cov0" title="0">{
+                        panic(fmt.Sprintf("Symbol not found: %v", head))</span>
+                }
+                <span class="cov8" title="1">proc := procRaw.(func([]interface{}) interface{})
+                var args []interface{}
+                for _, arg := range v[1:] </span><span class="cov8" title="1">{
+                        args = append(args, eval(arg, env))
+                }</span>
+                <span class="cov8" title="1">return proc(args)</span>
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+
+func evalString(w io.Writer, input string, env *Env, quiet bool) interface{} <span class="cov8" title="1">{
+        tokens := tokenize(input)
+        var lastResult interface{}
+        for len(tokens) &gt; 0 </span><span class="cov8" title="1">{
+                var exp interface{}
+                exp, tokens = parse(tokens)
+                lastResult = eval(exp, env)
+                if !quiet &amp;&amp; lastResult != nil </span><span class="cov8" title="1">{
+                        if bi, ok := lastResult.(*big.Int); ok </span><span class="cov8" title="1">{
+                                fmt.Fprintln(w, bi.String())
+                        }</span> else<span class="cov8" title="1"> {
+                                fmt.Fprintf(w, "%v\n", lastResult)
+                        }</span>
+                }
+        }
+        <span class="cov8" title="1">return lastResult</span>
+}
+
+func main() <span class="cov0" title="0">{
+        env := standardEnv()
+        
+        // Load stdlib if exists
+        if content, err := os.ReadFile("stdlib.lisp"); err == nil </span><span class="cov0" title="0">{
+                evalString(io.Discard, string(content), env, true)
+        }</span>
+
+        <span class="cov0" title="0">scanner := bufio.NewScanner(os.Stdin)
+        var input string
+        for scanner.Scan() </span><span class="cov0" title="0">{
+                line := scanner.Text()
+                input += " " + line
+                if strings.Count(input, "(") == strings.Count(input, ")") &amp;&amp; 
+                   strings.Count(input, "\"")%2 == 0 </span><span class="cov0" title="0">{
+                        evalString(os.Stdout, input, env, false)
+                        input = ""
+                }</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

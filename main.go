@@ -124,6 +124,19 @@ func parse(tokens []string) (interface{}, []string) {
 	token := tokens[0]
 	rest := tokens[1:]
 
+	if token == "def" {
+		list := List{Symbol("define")}
+		for len(rest) > 0 && rest[0] != "end" {
+			var item interface{}
+			item, rest = parse(rest)
+			list = append(list, item)
+		}
+		if len(rest) == 0 {
+			panic("unexpected EOF: missing end")
+		}
+		return list, rest[1:]
+	}
+
 	if token == "'" {
 		var item interface{}
 		item, rest = parse(rest)

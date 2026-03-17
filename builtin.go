@@ -85,14 +85,19 @@ func standardEnv() *Env {
 	// Python-like Math
 	e.set("abs", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
-		case *big.Int: return new(big.Int).Abs(v)
-		case float64: return math.Abs(v)
-		default: panic("abs requires number")
+		case *big.Int:
+			return new(big.Int).Abs(v)
+		case float64:
+			return math.Abs(v)
+		default:
+			panic("abs requires number")
 		}
 	})
 	e.set("pow", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
-		if ai, ok := a.(*big.Int); ok { return new(big.Int).Exp(ai, b.(*big.Int), nil) }
+		if ai, ok := a.(*big.Int); ok {
+			return new(big.Int).Exp(ai, b.(*big.Int), nil)
+		}
 		return math.Pow(a.(float64), b.(float64))
 	})
 	e.set("divmod", func(args []interface{}) interface{} {
@@ -105,30 +110,53 @@ func standardEnv() *Env {
 	// Conversions & Predicates
 	e.set("int", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
-		case float64: return big.NewInt(int64(v))
-		case string: bi := new(big.Int); bi.SetString(v, 10); return bi
-		default: return v.(*big.Int)
+		case float64:
+			return big.NewInt(int64(v))
+		case string:
+			bi := new(big.Int)
+			bi.SetString(v, 10)
+			return bi
+		default:
+			return v.(*big.Int)
 		}
 	})
 	e.set("integer", e.get("int")) // alias
 	e.set("float", func(args []interface{}) interface{} {
 		switch v := args[0].(type) {
-		case *big.Int: f, _ := new(big.Float).SetInt(v).Float64(); return f
-		case string: f, _ := strconv.ParseFloat(v, 64); return f
-		case float64: return v
-		default: panic(fmt.Sprintf("float conversion failed: unsupported type %T", v))
+		case *big.Int:
+			f, _ := new(big.Float).SetInt(v).Float64()
+			return f
+		case string:
+			f, _ := strconv.ParseFloat(v, 64)
+			return f
+		case float64:
+			return v
+		default:
+			panic(fmt.Sprintf("float conversion failed: unsupported type %T", v))
 		}
 	})
 	e.set("str", func(args []interface{}) interface{} {
-		if bi, ok := args[0].(*big.Int); ok { return bi.String() }
+		if bi, ok := args[0].(*big.Int); ok {
+			return bi.String()
+		}
 		return fmt.Sprintf("%v", args[0])
 	})
 	e.set("bool", func(args []interface{}) interface{} {
-		if args[0] == nil || args[0] == false { return false }
-		if bi, ok := args[0].(*big.Int); ok && bi.Sign() == 0 { return false }
-		if f, ok := args[0].(float64); ok && f == 0 { return false }
-		if s, ok := args[0].(string); ok && s == "" { return false }
-		if l, ok := args[0].(List); ok && len(l) == 0 { return false }
+		if args[0] == nil || args[0] == false {
+			return false
+		}
+		if bi, ok := args[0].(*big.Int); ok && bi.Sign() == 0 {
+			return false
+		}
+		if f, ok := args[0].(float64); ok && f == 0 {
+			return false
+		}
+		if s, ok := args[0].(string); ok && s == "" {
+			return false
+		}
+		if l, ok := args[0].(List); ok && len(l) == 0 {
+			return false
+		}
 		return true
 	})
 	e.set("integer?", func(args []interface{}) interface{} { _, ok := args[0].(*big.Int); return ok })
@@ -144,7 +172,9 @@ func standardEnv() *Env {
 	e.set("length", func(args []interface{}) interface{} { return big.NewInt(int64(len(args[0].(List)))) })
 	e.set("append", func(args []interface{}) interface{} {
 		res := List{}
-		for _, arg := range args { res = append(res, arg.(List)...) }
+		for _, arg := range args {
+			res = append(res, arg.(List)...)
+		}
 		return res
 	})
 	e.set("nth", func(args []interface{}) interface{} {
@@ -154,7 +184,9 @@ func standardEnv() *Env {
 	e.set("reverse", func(args []interface{}) interface{} {
 		l := args[0].(List)
 		res := make(List, len(l))
-		for i, v := range l { res[len(l)-1-i] = v }
+		for i, v := range l {
+			res[len(l)-1-i] = v
+		}
 		return res
 	})
 	e.set("reversed", e.get("reverse"))
@@ -249,7 +281,11 @@ func standardEnv() *Env {
 	e.set("concat", func(args []interface{}) interface{} {
 		res := ""
 		for _, arg := range args {
-			if bi, ok := arg.(*big.Int); ok { res += bi.String() } else { res += fmt.Sprintf("%v", arg) }
+			if bi, ok := arg.(*big.Int); ok {
+				res += bi.String()
+			} else {
+				res += fmt.Sprintf("%v", arg)
+			}
 		}
 		return res
 	})
@@ -257,7 +293,9 @@ func standardEnv() *Env {
 		s, sep := args[0].(string), args[1].(string)
 		parts := strings.Split(s, sep)
 		res := make(List, len(parts))
-		for i, p := range parts { res[i] = p }
+		for i, p := range parts {
+			res[i] = p
+		}
 		return res
 	})
 	e.set("string-trim", func(args []interface{}) interface{} { return strings.TrimSpace(args[0].(string)) })
@@ -269,18 +307,26 @@ func standardEnv() *Env {
 
 	// Files
 	e.set("read-file", func(args []interface{}) interface{} {
-		content, _ := os.ReadFile(args[0].(string)); return string(content)
+		content, _ := os.ReadFile(args[0].(string))
+		return string(content)
 	})
 	e.set("write-file", func(args []interface{}) interface{} {
-		os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644); return true
+		os.WriteFile(args[0].(string), []byte(args[1].(string)), 0644)
+		return true
 	})
 
 	// Iterables
 	e.set("range", func(args []interface{}) interface{} {
-		start := int64(0); stop := args[0].(*big.Int).Int64()
-		if len(args) > 1 { start = stop; stop = args[1].(*big.Int).Int64() }
+		start := int64(0)
+		stop := args[0].(*big.Int).Int64()
+		if len(args) > 1 {
+			start = stop
+			stop = args[1].(*big.Int).Int64()
+		}
 		res := List{}
-		for i := start; i < stop; i++ { res = append(res, big.NewInt(i)) }
+		for i := start; i < stop; i++ {
+			res = append(res, big.NewInt(i))
+		}
 		return res
 	})
 	e.set("sorted", func(args []interface{}) interface{} {
@@ -315,31 +361,46 @@ func standardEnv() *Env {
 		fn := args[0].(func([]interface{}) interface{})
 		l := args[1].(List)
 		res := make(List, len(l))
-		for i, v := range l { res[i] = fn([]interface{}{v}) }
+		for i, v := range l {
+			res[i] = fn([]interface{}{v})
+		}
 		return res
 	})
 	e.set("filter", func(args []interface{}) interface{} {
 		fn := args[0].(func([]interface{}) interface{})
 		l := args[1].(List)
 		res := List{}
-		for _, v := range l { if test := fn([]interface{}{v}); test.(bool) { res = append(res, v) } }
+		for _, v := range l {
+			if test := fn([]interface{}{v}); test.(bool) {
+				res = append(res, v)
+			}
+		}
 		return res
 	})
 	e.set("reduce", func(args []interface{}) interface{} {
 		fn := args[0].(func([]interface{}) interface{})
 		l := args[1].(List)
 		acc := args[2]
-		for _, v := range l { acc = fn([]interface{}{acc, v}) }
+		for _, v := range l {
+			acc = fn([]interface{}{acc, v})
+		}
 		return acc
 	})
 
 	// System & Debug
 	e.set("print", func(args []interface{}) interface{} {
 		for i, arg := range args {
-			if i > 0 { fmt.Print(" ") }
-			if bi, ok := arg.(*big.Int); ok { fmt.Print(bi.String()) } else { fmt.Print(arg) }
+			if i > 0 {
+				fmt.Print(" ")
+			}
+			if bi, ok := arg.(*big.Int); ok {
+				fmt.Print(bi.String())
+			} else {
+				fmt.Print(arg)
+			}
 		}
-		fmt.Println(); return nil
+		fmt.Println()
+		return nil
 	})
 	e.set("input", func(args []interface{}) interface{} {
 		if len(args) > 0 {

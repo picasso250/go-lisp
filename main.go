@@ -52,15 +52,15 @@ func tokenize(s string) []string {
 			if escaped {
 				switch r {
 				case 'n':
-				        builder.WriteRune('\n')
+					builder.WriteRune('\n')
 				case 'r':
-				        builder.WriteRune('\r')
+					builder.WriteRune('\r')
 				case 't':
-				        builder.WriteRune('\t')
+					builder.WriteRune('\t')
 				case '\\':
-				        builder.WriteRune('\\')
+					builder.WriteRune('\\')
 				case '"':
-				        builder.WriteRune('"')
+					builder.WriteRune('"')
 				default:
 
 					builder.WriteRune('\\')
@@ -154,8 +154,12 @@ func eval(x interface{}, env *Env) interface{} {
 	case string, float64, *big.Int, bool:
 		return v
 	case Symbol:
-		if v == "true" { return true }
-		if v == "false" { return false }
+		if v == "true" {
+			return true
+		}
+		if v == "false" {
+			return false
+		}
 		return env.get(v)
 	case List:
 		if len(v) == 0 {
@@ -263,7 +267,7 @@ func main() {
 	flag.Parse()
 
 	env := standardEnv()
-	
+
 	// Load stdlib if exists
 	if content, err := os.ReadFile("stdlib.lisp"); err == nil {
 		evalString(io.Discard, string(content), env, true)
@@ -290,8 +294,8 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		input += " " + line
-		if strings.Count(input, "(") == strings.Count(input, ")") && 
-		   strings.Count(input, "\"")%2 == 0 {
+		if strings.Count(input, "(") == strings.Count(input, ")") &&
+			strings.Count(input, "\"")%2 == 0 {
 			evalString(os.Stdout, input, env, false)
 			input = ""
 		}

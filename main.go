@@ -203,8 +203,7 @@ func eval(x interface{}, env *Env) interface{} {
 			if v == "nil" {
 				return nil
 			}
-			res := env.get(v)
-			return res
+			return env.get(v)
 		case List:
 			if len(v) == 0 {
 				return nil

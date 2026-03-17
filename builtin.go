@@ -373,37 +373,6 @@ func standardEnv() *Env {
 		return l
 	})
 
-	// Higher Order
-	e.set("map", func(args []interface{}) interface{} {
-		fn := args[0].(func([]interface{}) interface{})
-		l := args[1].(List)
-		res := make(List, len(l))
-		for i, v := range l {
-			res[i] = resolve(fn([]interface{}{v}))
-		}
-		return res
-	})
-	e.set("filter", func(args []interface{}) interface{} {
-		fn := args[0].(func([]interface{}) interface{})
-		l := args[1].(List)
-		res := List{}
-		for _, v := range l {
-			if test := resolve(fn([]interface{}{v})); test.(bool) {
-				res = append(res, v)
-			}
-		}
-		return res
-	})
-	e.set("reduce", func(args []interface{}) interface{} {
-		fn := args[0].(func([]interface{}) interface{})
-		l := args[1].(List)
-		acc := args[2]
-		for _, v := range l {
-			acc = resolve(fn([]interface{}{acc, v}))
-		}
-		return acc
-	})
-
 	// System & Debug
 	e.set("print", func(args []interface{}) interface{} {
 		for i, arg := range args {

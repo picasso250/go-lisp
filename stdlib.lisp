@@ -1,5 +1,30 @@
 (define not (lambda (x) (if x false true)))
 
+(define map (lambda (f l)
+  (if (null? l) '()
+      (begin
+        (define (iter items acc)
+          (if (null? items)
+              (reverse acc)
+              (iter (cdr items) (cons (f (car items)) acc))))
+        (iter l '())))))
+
+(define filter (lambda (f l)
+  (if (null? l) '()
+      (begin
+        (define (iter items acc)
+          (if (null? items)
+              (reverse acc)
+              (if (f (car items))
+                  (iter (cdr items) (cons (car items) acc))
+                  (iter (cdr items) acc))))
+        (iter l '())))))
+
+(define reduce (lambda (f l acc)
+  (if (null? l)
+      acc
+      (reduce f (cdr l) (f acc (car l))))))
+
 (define sum (lambda (l) (reduce + l 0)))
 
 (define all (lambda (l)

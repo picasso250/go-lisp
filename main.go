@@ -175,6 +175,22 @@ func eval(x interface{}, env *Env) interface{} {
 					result = eval(exp, env)
 				}
 				return result
+			case "and":
+				for _, exp := range v[1:] {
+					res := eval(exp, env)
+					if res == false {
+						return false
+					}
+				}
+				return true
+			case "or":
+				for _, exp := range v[1:] {
+					res := eval(exp, env)
+					if res == true {
+						return true
+					}
+				}
+				return false
 			case "let":
 				bindings := v[1].(List)
 				body := v[2]

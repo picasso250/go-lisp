@@ -75,6 +75,31 @@ func TestE2E(t *testing.T) {
 			input: "(not true) (not false) (even? 4) (even? 5) (foldl + '(1 2 3) 10)",
 			expected: []string{"false", "true", "true", "false", "16"},
 		},
+		{
+			name:  "Short-circuit Logic",
+			input: "(and true true false) (and true true) (or false false true) (or false false)",
+			expected: []string{"false", "true", "true", "false"},
+		},
+		{
+			name:  "Python Math & Conversions",
+			input: "(abs -50) (pow 2 10) (str 123) (int \"456\") (bool 0) (bool 1) (bool '())",
+			expected: []string{"50", "1024", "123", "456", "false", "true", "false"},
+		},
+		{
+			name:  "Range and Zip",
+			input: "(range 3) (zip '(a b) '(1 2)) (sum (range 11))",
+			expected: []string{"[0 1 2]", "[[a 1] [b 2]]", "55"},
+		},
+		{
+			name:  "Enumerate",
+			input: "(enumerate '(apple banana))",
+			expected: []string{"[[0 apple] [1 banana]]"},
+		},
+		{
+			name:  "Hex and Bin",
+			input: "(bin 10) (hex 255)",
+			expected: []string{"0b1010", "0xff"},
+		},
 	}
 
 	for _, tc := range cases {

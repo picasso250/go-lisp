@@ -10,24 +10,43 @@ import (
 	"strings"
 )
 
+// mustSameType 统一处理类型一致性检查
+func mustSameType(name string, a, b interface{}) {
+	if fmt.Sprintf("%T", a) != fmt.Sprintf("%T", b) {
+		panic(fmt.Sprintf("%s: type mismatch", name))
+	}
+}
+
+// binaryOp 算术运算工厂
 func binaryOp(name string, opInt func(*big.Int, *big.Int) *big.Int, opFloat func(float64, float64) float64) func([]interface{}) interface{} {
 	return func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
+		mustSameType(name, a, b)
 		switch av := a.(type) {
 		case *big.Int:
-			bv, ok := b.(*big.Int)
-			if !ok {
-				panic(fmt.Sprintf("%s: type mismatch, expected integers", name))
-			}
-			return opInt(av, bv)
+			return opInt(av, b.(*big.Int))
 		case float64:
-			bv, ok := b.(float64)
-			if !ok {
-				panic(fmt.Sprintf("%s: type mismatch, expected floats", name))
-			}
-			return opFloat(av, bv)
+			return opFloat(av, b.(float64))
 		default:
 			panic(fmt.Sprintf("%s: invalid types", name))
+		}
+	}
+}
+
+// compareOp 比较运算工厂
+func compareOp(name string, opInt func(*big.Int, *big.Int) bool, opFloat func(float64, float64) bool, opStr func(string, string) bool) func([]interface{}) interface{} {
+	return func(args []interface{}) interface{} {
+		a, b := args[0], args[1]
+		mustSameType(name, a, b)
+		switch av := a.(type) {
+		case *big.Int:
+			return opInt(av, b.(*big.Int))
+		case float64:
+			return opFloat(av, b.(float64))
+		case string:
+			return opStr(av, b.(string))
+		default:
+			panic(fmt.Sprintf("%s: incomparable type", name))
 		}
 	}
 }
@@ -43,93 +62,18 @@ func standardEnv() *Env {
 	e.set("%", binaryOp("%", func(a, b *big.Int) *big.Int { return new(big.Int).Mod(a, b) }, func(a, b float64) float64 { return math.Mod(a, b) }))
 
 	// Comparisons
-	e.set("<", func(args []interface{}) interface{} {
-		a, b := args[0], args[1]
-		switch av := a.(type) {
-		case *big.Int:
-			bv, ok := b.(*big.Int)
-			if !ok { panic("<: type mismatch") }
-			return av.Cmp(bv) < 0
-		case float64:
-			bv, ok := b.(float64)
-			if !ok { panic("<: type mismatch") }
-			return av < bv
-		case string:
-			bv, ok := b.(string)
-			if !ok { panic("<: type mismatch") }
-			return av < bv
-		default:
-			panic("<: incomparable type")
-		}
-	})
-	e.set("<=", func(args []interface{}) interface{} {
-		a, b := args[0], args[1]
-		switch av := a.(type) {
-		case *big.Int:
-			bv, ok := b.(*big.Int)
-			if !ok { panic("<=: type mismatch") }
-			return av.Cmp(bv) <= 0
-		case float64:
-			bv, ok := b.(float64)
-			if !ok { panic("<=: type mismatch") }
-			return av <= bv
-		case string:
-			bv, ok := b.(string)
-			if !ok { panic("<=: type mismatch") }
-			return av <= bv
-		default:
-			panic("<=: incomparable type")
-		}
-	})
-	e.set(">", func(args []interface{}) interface{} {
-		a, b := args[0], args[1]
-		switch av := a.(type) {
-		case *big.Int:
-			bv, ok := b.(*big.Int)
-			if !ok { panic(">: type mismatch") }
-			return av.Cmp(bv) > 0
-		case float64:
-			bv, ok := b.(float64)
-			if !ok { panic(">: type mismatch") }
-			return av > bv
-		case string:
-			bv, ok := b.(string)
-			if !ok { panic(">: type mismatch") }
-			return av > bv
-		default:
-			panic(">: incomparable type")
-		}
-	})
-	e.set(">=", func(args []interface{}) interface{} {
-		a, b := args[0], args[1]
-		switch av := a.(type) {
-		case *big.Int:
-			bv, ok := b.(*big.Int)
-			if !ok { panic(">=: type mismatch") }
-			return av.Cmp(bv) >= 0
-		case float64:
-			bv, ok := b.(float64)
-			if !ok { panic(">=: type mismatch") }
-			return av >= bv
-		case string:
-			bv, ok := b.(string)
-			if !ok { panic(">=: type mismatch") }
-			return av >= bv
-		default:
-			panic(">=: incomparable type")
-		}
-	})
+	e.set("<", compareOp("<", func(a, b *big.Int) bool { return a.Cmp(b) < 0 }, func(a, b float64) bool { return a < b }, func(a, b string) bool { return a < b }))
+	e.set("<=", compareOp("<=", func(a, b *big.Int) bool { return a.Cmp(b) <= 0 }, func(a, b float64) bool { return a <= b }, func(a, b string) bool { return a <= b }))
+	e.set(">", compareOp(">", func(a, b *big.Int) bool { return a.Cmp(b) > 0 }, func(a, b float64) bool { return a > b }, func(a, b string) bool { return a > b }))
+	e.set(">=", compareOp(">=", func(a, b *big.Int) bool { return a.Cmp(b) >= 0 }, func(a, b float64) bool { return a >= b }, func(a, b string) bool { return a >= b }))
+
 	e.set("=", func(args []interface{}) interface{} {
 		a, b := args[0], args[1]
-		if fmt.Sprintf("%T", a) != fmt.Sprintf("%T", b) {
-			panic("=: type mismatch")
+		mustSameType("=", a, b)
+		if bi, ok := a.(*big.Int); ok {
+			return bi.Cmp(b.(*big.Int)) == 0
 		}
-		switch av := a.(type) {
-		case *big.Int:
-			return av.Cmp(b.(*big.Int)) == 0
-		default:
-			return a == b
-		}
+		return a == b
 	})
 	e.set("!=", func(args []interface{}) interface{} {
 		return !e.get("=").(func([]interface{}) interface{})(args).(bool)
